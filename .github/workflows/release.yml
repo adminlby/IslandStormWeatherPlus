@@ -1,38 +1,57 @@
 name: Release
-
-# 推送形如 v1.0.0 的 tag 时：构建插件并自动创建 GitHub Release，附带 jar。
-# 例： git tag v1.0.0 && git push origin v1.0.0
-
+# push 到 main 时,读取 pom.xml 版本号,自动建 tag + Release + 上传插件 jar。
+# 同一版本号只发一次(tag 已存在则跳过),配合自动升级版本号的机制使用。
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/dependabot.yml'
+      - 'LICENSE'
   workflow_dispatch:
-
 permissions:
-  contents: write
-
+  contents: write   # 创建 Release 和 tag 需要写权限,缺这行会直接 403 失败
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   release:
-    name: Build & Publish Release
+    name: Auto Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-
+      - name: Read version from pom.xml
+        id: ver
+        run: |
+          VERSION=$(mvn -q -ntp help:evaluate -Dexpression=project.version -DforceStdout)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "读到版本号: $VERSION"
+      - name: Check if tag already exists
+        id: check
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.ver.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "tag v${{ steps.ver.outputs.version }} 已存在,跳过本次发版"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build with Maven
+        if: steps.check.outputs.exists == 'false'
         run: mvn -B -ntp clean package
-
-      - name: Create GitHub Release
+      - name: Create Release
+        if: steps.check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v3
         with:
-          files: target/IslandStorm-*.jar
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: v${{ steps.ver.outputs.version }}
           generate_release_notes: true
+          files: target/IslandStorm-*.jar
           fail_on_unmatched_files: true
