@@ -1,0 +1,18 @@
+# 代码所有者（Code Owners）
+# GitHub 会在 PR 修改到匹配文件时，自动请求对应 owner 审核。
+# 语法：<路径模式>  <负责人...>，后面的规则优先级高于前面的。
+# 文档：https://docs.github.com/articles/about-code-owners
+
+# 默认：仓库内所有文件都由 @adminlby 负责
+*       @adminlby
+
+# 构建与 CI 配置
+/pom.xml            @adminlby
+/.github/           @adminlby
+
+# 源码
+/src/               @adminlby
+
+# 项目文档与开发约定
+/CLAUDE.md          @adminlby
+/README.md          @adminlby
