@@ -29,7 +29,7 @@
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.20.6-R0.1-SNAPSHOT</version>
+            <version>26.1.2.build.66-stable</version>
             <scope>provided</scope>
         </dependency>
         <!-- Gson：网页控制台 REST API 的 JSON。打包时 shade 并重定位，避免与服务端类路径冲突 -->
