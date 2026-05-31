@@ -88,10 +88,15 @@
                 <button class="ghost" id="modeRegion" data-perm="region.create">✏ 画框建区域</button>
                 <button class="ghost" id="modeStorm" data-perm="storm.path.edit">🌀 点击建风暴点</button>
                 <button class="ghost" id="modePan">🖐 拖动</button>
+                <button class="ghost" id="bluemapToggle">🌍 BlueMap</button>
+                <a class="ghost" id="bluemapOpen" href="#" target="_blank" rel="noopener"
+                   style="display:none;text-decoration:none">↗ 新标签</a>
                 <span class="map-hint" id="mapMode">模式：拖动</span>
             </div>
             <canvas id="mapCanvas"></canvas>
-            <div class="map-hint">海洋=深蓝 · 陆地=绿 · 未知=灰 · 区域框按危险等级着色 · 风暴中心=红点</div>
+            <iframe id="bluemapFrame" title="BlueMap"
+                    style="display:none;width:100%;height:60vh;min-height:360px;border:0;border-radius:8px;background:#04162c"></iframe>
+            <div class="map-hint">简化图：海洋=深蓝 · 陆地=绿 · 未加载区块=灰 · 区域框按危险等级着色 · 风暴中心=红点 ｜ 真实地形请用「🌍 BlueMap」</div>
         </div>
 
         <div class="card col-4" data-perm="region.view">

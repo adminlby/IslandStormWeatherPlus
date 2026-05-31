@@ -66,7 +66,13 @@ map:
   max-x: 1000
   min-z: -1000
   max-z: 1000
-  provider: "vanilla"        # vanilla | bluemap | dynmap（后两者第一版为占位）
+  provider: "vanilla"        # vanilla | bluemap | dynmap（控制台 canvas 底图来源；vanilla 只采样已加载区块，永不卡服）
+  # BlueMap 接入（需服务端安装 BlueMap 插件；软依赖，未安装自动跳过）
+  bluemap:
+    enabled: true            # 把天气区域/台风路径作为标记推送到 BlueMap 真实地图
+    web-url: ""              # BlueMap 网页地址，如 http://你的服务器IP:8100/ ；填了控制台才会出现「🌍 BlueMap」入口
+    marker-y: 70             # 标记所在的 Y 平面高度（平面形状/路径线都画在该高度）
+    refresh-seconds: 5       # 标记刷新间隔（秒）；台风中心随时间移动靠它持续更新
 
 # ---------------- 方块破坏 ----------------
 block-damage:

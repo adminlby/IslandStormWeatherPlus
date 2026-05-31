@@ -22,6 +22,11 @@
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+        <!-- BlueMap API：仅编译期需要，运行时由服务端的 BlueMap 插件提供 -->
+        <repository>
+            <id>bluecolored</id>
+            <url>https://repo.bluecolored.de/releases</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -38,6 +43,14 @@
             <artifactId>gson</artifactId>
             <version>2.14.0</version>
             <scope>compile</scope>
+        </dependency>
+        <!-- BlueMap API：把天气区域/台风路径作为标记推送到 BlueMap 真实地图。
+             provided 作用域 = 不打包进 jar，运行时由用户安装的 BlueMap 插件提供（软依赖）。 -->
+        <dependency>
+            <groupId>de.bluecolored</groupId>
+            <artifactId>bluemap-api</artifactId>
+            <version>2.7.4</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

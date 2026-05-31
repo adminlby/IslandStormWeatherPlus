@@ -221,6 +221,27 @@ public class ConfigManager {
         return cfg.getString("map.provider", "vanilla");
     }
 
+    // ---- BlueMap 接入 ----
+    /** 是否把天气区域/风暴作为标记推送到 BlueMap 真实地图。 */
+    public boolean bluemapEnabled() {
+        return cfg.getBoolean("map.bluemap.enabled", true);
+    }
+
+    /** BlueMap 网页地址（供控制台「在 BlueMap 中查看」按钮跳转/嵌入）；为空表示未配置。 */
+    public String bluemapWebUrl() {
+        return cfg.getString("map.bluemap.web-url", "");
+    }
+
+    /** BlueMap 标记所在的 Y 平面高度（平面形状/线条都画在该高度）。 */
+    public int bluemapMarkerY() {
+        return cfg.getInt("map.bluemap.marker-y", 70);
+    }
+
+    /** BlueMap 标记刷新间隔（秒），台风中心移动靠它持续更新。 */
+    public int bluemapRefreshSeconds() {
+        return Math.max(1, cfg.getInt("map.bluemap.refresh-seconds", 5));
+    }
+
     // ---- 方块破坏 ----
     public boolean blockDamageEnabled() {
         return cfg.getBoolean("block-damage.enabled", false);
