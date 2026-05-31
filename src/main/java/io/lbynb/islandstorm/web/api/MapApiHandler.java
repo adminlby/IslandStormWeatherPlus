@@ -53,6 +53,8 @@ public class MapApiHandler {
             out.put("map", data);
             out.put("regions", regionsInWorld(worldName));
             out.put("storms", stormsInWorld(worldName));
+            // BlueMap 网页地址：供前端「🌍 BlueMap」按钮嵌入/跳转（与所选 provider 无关，始终下发）
+            out.put("bluemapWebUrl", plugin.configManager().bluemapWebUrl());
             return out;
         });
     }

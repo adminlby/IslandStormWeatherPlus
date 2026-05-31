@@ -13,6 +13,8 @@ window.ISTMap = (function () {
     let mode = 'pan'; // pan | region | storm
     let dragging = false, dragStart = null, dragCur = null, panStart = null;
     let stormDraft = [];
+    let bluemapWebUrl = ''; // 由后端 /api/map 下发；空表示未配置 map.bluemap.web-url
+    let bmShown = false;    // 当前是否正在内嵌显示 BlueMap
 
     function resize() {
         canvas.width = canvas.clientWidth;
@@ -142,6 +144,8 @@ window.ISTMap = (function () {
             });
             const data = await IST.api('map?' + params.toString());
             mapData = data.map; regions = data.regions || []; storms = data.storms || [];
+            bluemapWebUrl = data.bluemapWebUrl || '';
+            updateBluemapEntry();
             if (mapData) {
                 bounds = { minX: mapData.minX, minZ: mapData.minZ, maxX: mapData.maxX, maxZ: mapData.maxZ };
             }
@@ -227,10 +231,47 @@ window.ISTMap = (function () {
         } catch (e) { IST.toast(e.message, false); }
     }
 
+    // ---- BlueMap 入口 ----
+    function updateBluemapEntry() {
+        const open = document.getElementById('bluemapOpen');
+        if (open) {
+            if (bluemapWebUrl) { open.href = bluemapWebUrl; open.style.display = ''; }
+            else { open.style.display = 'none'; }
+        }
+        if (bmShown) {
+            const f = document.getElementById('bluemapFrame');
+            if (f && bluemapWebUrl && f.src !== bluemapWebUrl) f.src = bluemapWebUrl;
+        }
+    }
+
+    function toggleBluemap() {
+        const frame = document.getElementById('bluemapFrame');
+        if (!frame) return;
+        if (!bluemapWebUrl) {
+            IST.toast('未配置 BlueMap 网页地址（config.yml: map.bluemap.web-url）', false);
+            return;
+        }
+        bmShown = !bmShown;
+        const btn = document.getElementById('bluemapToggle');
+        if (bmShown) {
+            frame.src = bluemapWebUrl;
+            frame.style.display = 'block';
+            canvas.style.display = 'none';
+            if (btn) btn.textContent = '🗺 返回简化图';
+        } else {
+            frame.style.display = 'none';
+            frame.src = 'about:blank';
+            canvas.style.display = '';
+            if (btn) btn.textContent = '🌍 BlueMap';
+            resize();
+        }
+    }
+
     // 工具栏按钮
     const bindMode = (id, m) => { const el = document.getElementById(id); if (el) el.addEventListener('click', () => setMode(m)); };
     bindMode('modePan', 'pan'); bindMode('modeRegion', 'region'); bindMode('modeStorm', 'storm');
     const mr = document.getElementById('mapReload'); if (mr) mr.addEventListener('click', reload);
+    const bmBtn = document.getElementById('bluemapToggle'); if (bmBtn) bmBtn.addEventListener('click', toggleBluemap);
 
     window.addEventListener('resize', resize);
     setTimeout(() => { resize(); loadWorlds(); }, 100);

@@ -6,9 +6,11 @@ import io.lbynb.islandstorm.damage.BlockDamageManager;
 import io.lbynb.islandstorm.forecast.ForecastManager;
 import io.lbynb.islandstorm.forecast.HourlyForecastManager;
 import io.lbynb.islandstorm.html.HtmlWeatherCardGenerator;
+import io.lbynb.islandstorm.map.BlueMapHook;
 import io.lbynb.islandstorm.region.RegionManager;
 import io.lbynb.islandstorm.storm.StormPathManager;
 import io.lbynb.islandstorm.task.BlockDamageTask;
+import io.lbynb.islandstorm.task.BlueMapSyncTask;
 import io.lbynb.islandstorm.task.StormMovementTask;
 import io.lbynb.islandstorm.task.WeatherCycleTask;
 import io.lbynb.islandstorm.task.WindEffectTask;
@@ -18,6 +20,7 @@ import io.lbynb.islandstorm.weather.WeatherManager;
 import io.lbynb.islandstorm.web.WebAuthManager;
 import io.lbynb.islandstorm.web.WebServerManager;
 import io.lbynb.islandstorm.wind.WindManager;
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
@@ -50,6 +53,8 @@ public final class IslandStormPlugin extends JavaPlugin {
     private WebAuthManager webAuthManager;
     private WebServerManager webServerManager;
     private HtmlWeatherCardGenerator htmlGenerator;
+    /** BlueMap 接入钩子；仅当服务端安装了 BlueMap 时才非 null。 */
+    private BlueMapHook blueMapHook;
 
     private final List<BukkitTask> tasks = new ArrayList<>();
 
@@ -103,6 +108,8 @@ public final class IslandStormPlugin extends JavaPlugin {
 
         this.weatherManager.initDefault();
 
+        initBlueMapHook();
+
         registerCommands();
         startTasks();
 
@@ -115,11 +122,31 @@ public final class IslandStormPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         stopTasks();
+        if (blueMapHook != null) blueMapHook.shutdown();
         if (webServerManager != null) webServerManager.stop();
         if (regionManager != null) regionManager.save();
         if (stormPathManager != null) stormPathManager.save();
         getLogger().info("IslandStorm 已卸载。");
         instance = null;
+    }
+
+    /**
+     * 初始化 BlueMap 接入（软依赖）。只有检测到 BlueMap 插件时才实例化 {@link BlueMapHook}——
+     * 否则该类（引用 BlueMap API 类型）根本不会被加载，规避 NoClassDefFoundError。
+     * 监听器只注册一次（不随 reload 重复注册）。
+     */
+    private void initBlueMapHook() {
+        if (Bukkit.getPluginManager().getPlugin("BlueMap") == null) {
+            return;
+        }
+        try {
+            this.blueMapHook = new BlueMapHook(this);
+            this.blueMapHook.register();
+            getLogger().info("检测到 BlueMap，已启用天气标记同步。");
+        } catch (Throwable t) {
+            getLogger().warning("BlueMap 接入初始化失败（将禁用标记同步）：" + t.getMessage());
+            this.blueMapHook = null;
+        }
     }
 
     /** 重载整套配置并重启任务，保证不会出现任务重复运行。 */
@@ -154,6 +181,11 @@ public final class IslandStormPlugin extends JavaPlugin {
         tasks.add(new StormMovementTask(stormPathManager).runTaskTimer(this, 20L, 20L));
         int dmgInterval = Math.max(1, configManager.blockDamageIntervalTicks());
         tasks.add(new BlockDamageTask(blockDamageManager).runTaskTimer(this, dmgInterval, dmgInterval));
+        // BlueMap 标记刷新（仅在装了 BlueMap 时）：周期重建标记，让台风中心随时间移动
+        if (blueMapHook != null) {
+            long bmInterval = Math.max(20L, configManager.bluemapRefreshSeconds() * 20L);
+            tasks.add(new BlueMapSyncTask(blueMapHook).runTaskTimer(this, bmInterval, bmInterval));
+        }
     }
 
     private void stopTasks() {

@@ -10,6 +10,12 @@ import org.bukkit.block.Block;
  *
  * <p>性能：采样数 = cols*rows（cols 上限会被限制），仅在地图接口被调用时执行一次，
  * 且由调用方保证在主线程同步执行。不做持续扫描。</p>
+ *
+ * <p><b>重要（曾导致服务器卡死）</b>：{@code getHighestBlockYAt} 对「尚未生成的区块」会在
+ * 主线程<strong>同步强制生成区块</strong>。当地图范围很大（如默认 2000×2000）时，一次地图请求
+ * 会触发上千个区块的同步生成，主线程冻结数十秒。因此这里只采样<strong>已加载在内存中的区块</strong>
+ * （{@link World#isChunkLoaded(int, int)}），未加载处一律返回「未知」，保证零 IO、零生成、永不卡顿。
+ * 真实地形底图请使用 BlueMap 接入（控制台「🌍 BlueMap」按钮）。</p>
  */
 public class VanillaMapProvider implements MapProvider {
 
@@ -55,6 +61,10 @@ public class VanillaMapProvider implements MapProvider {
     /** 0=未知 1=海洋 2=陆地。 */
     private int classify(World world, int x, int z, int seaLevel) {
         try {
+            // 只采样已加载的区块；未加载处返回未知，避免 getHighestBlockYAt 强制生成区块卡死主线程。
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                return 0;
+            }
             int y = world.getHighestBlockYAt(x, z);
             Block top = world.getBlockAt(x, y, z);
             Material m = top.getType();
