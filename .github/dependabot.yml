@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Maven 依赖（paper-api / gson / 各插件）更新
+  # Maven 依赖（gson / 各插件）更新
   - package-ecosystem: maven
     directory: "/"
     schedule:
@@ -8,6 +8,11 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
+    ignore:
+      # paper-api 的版本号与 Minecraft 版本强绑定（本项目锁定 1.20.6 / Java 21）。
+      # Dependabot 会把 26.x.build.* 这类新版本方案误判为升级，导致 class 版本不兼容编译失败。
+      # MC 服务端版本升级必须人工评估，故完全忽略 paper-api 的自动更新。
+      - dependency-name: "io.papermc.paper:paper-api"
 
   # GitHub Actions 版本更新
   - package-ecosystem: github-actions
