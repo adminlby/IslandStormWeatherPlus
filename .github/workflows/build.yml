@@ -42,7 +42,7 @@ jobs:
         run: mvn -B -ntp clean package
 
       - name: Upload plugin jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: IslandStorm-plugin
           # 只取最终插件 jar；shade 产生的 original-*.jar 不以 IslandStorm- 开头，自动排除
