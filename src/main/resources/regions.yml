@@ -1,0 +1,21 @@
+# 区域天气数据（矩形，按 X/Z 平面圈定，不限 Y）
+# 可用游戏指令创建，也可用网页控制台地图画框创建。
+# duration-minutes: 0 或缺省 表示永久；其余为现实分钟数。
+#
+# 示例（默认注释掉，按需取消注释）：
+# regions:
+#   main-island:
+#     world: world
+#     min-x: -250
+#     max-x: 250
+#     min-z: -250
+#     max-z: 250
+#     weather: HEAVY_RAIN
+#     wind-speed: 70
+#     wind-direction: NE
+#     danger-level: HIGH
+#     duration-minutes: 30
+#     block-damage-enabled: false
+#     block-damage-level: 0
+
+regions: {}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IslandStorm 控制台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="topbar">
+    <div class="brand">🌀 IslandStorm 控制台</div>
+    <div class="right">
+        <span id="who"></span>
+        <span id="clock"></span>
+        <button id="logout">退出登录</button>
+    </div>
+</div>
+
+<div class="wrap">
+    <div class="grid">
+        <!-- 运行状态 -->
+        <div class="card col-12">
+            <h2>📊 运行状态</h2>
+            <div class="stat-row" id="statRow"></div>
+        </div>
+
+        <!-- 当前天气 + 控制 -->
+        <div class="card col-6">
+            <h2>🌤 当前天气</h2>
+            <div class="weather-now">
+                <div class="icon" id="wIcon">⏳</div>
+                <div class="info">
+                    <div class="name" id="wName">加载中…</div>
+                    <div class="meta" id="wMeta"></div>
+                    <div class="meta" id="wMeta2"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card col-6" data-perm="weather.set">
+            <h2>🎛 设置全局天气</h2>
+            <label class="f">天气类型</label>
+            <select class="f" id="setWeatherType"></select>
+            <div class="row">
+                <div>
+                    <label class="f">时长数值</label>
+                    <input class="f" id="setWeatherValue" type="number" value="30" min="0">
+                </div>
+                <div>
+                    <label class="f">单位</label>
+                    <select class="f" id="setWeatherUnit">
+                        <option value="m">分钟</option><option value="s">秒</option>
+                        <option value="h">小时</option><option value="d">天</option>
+                        <option value="mcminute">MC分</option><option value="mchour">MC时</option>
+                        <option value="mcday">MC天</option><option value="ticks">ticks</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="f">时间模式</label>
+                    <select class="f" id="setWeatherMode">
+                        <option value="REAL_TIME">REAL_TIME</option>
+                        <option value="MC_TIME">MC_TIME</option>
+                    </select>
+                </div>
+            </div>
+            <button class="act" id="btnSetWeather">应用天气</button>
+            <hr style="border-color:var(--line);margin:16px 0">
+            <h2 style="margin-bottom:8px">💨 设置风</h2>
+            <div class="row">
+                <div><label class="f">风速 km/h</label><input class="f" id="windSpeed" type="number" value="20" min="0"></div>
+                <div><label class="f">风向</label><select class="f" id="windDir"></select></div>
+            </div>
+            <button class="act" id="btnSetWind" data-perm="wind.set">应用风</button>
+        </div>
+
+        <!-- 预报 -->
+        <div class="card col-12" data-perm="forecast.view">
+            <h2>🗓 小时级预报（未来 24 小时）</h2>
+            <div class="fc-strip" id="hourlyStrip"></div>
+        </div>
+
+        <!-- 地图 + 区域 -->
+        <div class="card col-8" data-perm="map.view">
+            <h2>🗺 世界地图 / 区域</h2>
+            <div class="map-tools">
+                <select class="f" id="mapWorld" style="width:auto"></select>
+                <button class="ghost" id="mapReload">刷新地图</button>
+                <button class="ghost" id="modeRegion" data-perm="region.create">✏ 画框建区域</button>
+                <button class="ghost" id="modeStorm" data-perm="storm.path.edit">🌀 点击建风暴点</button>
+                <button class="ghost" id="modePan">🖐 拖动</button>
+                <span class="map-hint" id="mapMode">模式：拖动</span>
+            </div>
+            <canvas id="mapCanvas"></canvas>
+            <div class="map-hint">海洋=深蓝 · 陆地=绿 · 未知=灰 · 区域框按危险等级着色 · 风暴中心=红点</div>
+        </div>
+
+        <div class="card col-4" data-perm="region.view">
+            <h2>📍 区域列表</h2>
+            <div style="max-height:430px;overflow:auto">
+                <table id="regionTable">
+                    <thead><tr><th>名称</th><th>天气</th><th>操作</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 风暴路径 -->
+        <div class="card col-6" data-perm="storm.path.view">
+            <h2>🌪 风暴路径</h2>
+            <div id="stormList"></div>
+        </div>
+
+        <!-- HTML 生成 -->
+        <div class="card col-6" data-perm="html.generate">
+            <h2>🖼 HTML 天气卡</h2>
+            <p class="muted" style="font-size:13px">生成 OBS 浏览器源可用的天气卡片。</p>
+            <button class="ghost" id="htmlPreview">生成天气预览卡</button>
+            <button class="ghost" id="htmlForecast">生成小时预报卡</button>
+            <button class="ghost" id="htmlAll">生成全部</button>
+            <div class="muted" id="htmlResult" style="margin-top:10px;font-size:12px"></div>
+        </div>
+
+        <!-- 用户管理 -->
+        <div class="card col-12" data-perm="user.manage">
+            <h2>👥 网页用户管理</h2>
+            <div class="row" style="align-items:flex-end">
+                <div><label class="f">用户名</label><input class="f" id="nuName"></div>
+                <div><label class="f">密码</label><input class="f" id="nuPass" type="password"></div>
+                <div style="flex:0 0 auto"><button class="act" id="btnCreateUser">创建用户</button></div>
+            </div>
+            <table id="userTable" style="margin-top:14px">
+                <thead><tr><th>用户名</th><th>权限</th><th>操作</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 区域设置弹层 -->
+<div class="modal-bg" id="regionModal">
+    <div class="modal">
+        <span class="close" onclick="IST.closeModal()">✕</span>
+        <h3 id="regionModalTitle">新建区域天气</h3>
+        <label class="f">区域名称</label><input class="f" id="rmName">
+        <div class="row">
+            <div><label class="f">minX</label><input class="f" id="rmMinX" type="number"></div>
+            <div><label class="f">minZ</label><input class="f" id="rmMinZ" type="number"></div>
+            <div><label class="f">maxX</label><input class="f" id="rmMaxX" type="number"></div>
+            <div><label class="f">maxZ</label><input class="f" id="rmMaxZ" type="number"></div>
+        </div>
+        <label class="f">天气类型</label><select class="f" id="rmWeather"></select>
+        <div class="row">
+            <div><label class="f">风速</label><input class="f" id="rmWindSpeed" type="number" value="40"></div>
+            <div><label class="f">风向</label><select class="f" id="rmWindDir"></select></div>
+        </div>
+        <div class="row">
+            <div>
+                <label class="f">持续(分钟,0=永久)</label><input class="f" id="rmDuration" type="number" value="30">
+            </div>
+            <div>
+                <label class="f">方块破坏</label>
+                <select class="f" id="rmDamage"><option value="false">关闭</option><option value="true">开启</option></select>
+            </div>
+            <div><label class="f">破坏等级</label><input class="f" id="rmDamageLevel" type="number" value="0" min="0" max="5"></div>
+        </div>
+        <button class="act" id="rmSave">保存区域</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+<script src="map.js"></script>
+</body>
+</html>

@@ -1,0 +1,1115 @@
+你是一名资深 Minecraft Paper 插件开发者，请帮我完整开发一个 Minecraft 高级天气系统插件。
+
+项目名称：IslandStorm
+服务端版本：Paper 1.20.6
+Java 版本：Java 21
+构建工具：Gradle Kotlin DSL
+插件类型：服务端插件，兼容 Paper / Purpur / Leaf 1.20.6
+
+插件目标：
+为一个 100 小时荒岛生存直播服务器开发高级天气系统。插件不仅要控制 Minecraft 原版天气，还要加入风速、风向、天气预报、区域天气、玩家姿态影响、鞘翅飞行影响、强风吹动玩家、台风路径、极端风暴路径、方块破坏、精美 HTML 天气预览卡、网页控制台等功能。
+
+一、基础要求
+
+请输出完整可运行项目代码，包括：
+
+1. build.gradle.kts
+2. settings.gradle.kts
+3. plugin.yml
+4. Java 源码
+5. 默认 config.yml
+6. 默认 messages.yml
+7. 默认 web-users.yml
+8. 默认 regions.yml
+9. HTML 模板文件
+10. 网页控制台前端文件
+11. README.md
+12. 指令说明
+13. 权限节点说明
+
+代码必须可以直接在 IntelliJ IDEA 中打开并编译。
+
+二、核心天气功能
+
+插件需要支持以下天气类型：
+
+1. CLEAR：晴天
+2. CLOUDY：多云
+3. RAIN：小雨
+4. HEAVY_RAIN：暴雨
+5. THUNDERSTORM：雷暴
+6. FOG：浓雾
+7. WINDY：大风
+8. TYPHOON：台风
+9. EXTREME_STORM：极端风暴
+
+每种天气都要包含：
+
+* 显示名称
+* 描述
+* 图标
+* 默认持续时间
+* 默认风速
+* 默认风向
+* 是否下雨
+* 是否打雷
+* 能见度描述
+* 危险等级
+* 是否允许破坏方块
+* 默认破坏强度
+* 默认影响半径
+
+三、风系统
+
+插件必须实现独立风系统。
+
+风速单位使用 km/h。
+
+风向支持：
+
+* N
+* NE
+* E
+* SE
+* S
+* SW
+* W
+* NW
+
+风速等级：
+
+0-10 km/h：无影响
+11-30 km/h：轻微影响
+31-60 km/h：明显影响
+61-90 km/h：强风
+91-120 km/h：危险强风
+120+ km/h：极端危险
+
+风的实际用途：
+
+1. 玩家在地面行走时，强风会轻微改变移动姿态和速度。
+2. 风速较大时，玩家会被风向推动。
+3. 风太大时，玩家会被吹走。
+4. 玩家使用鞘翅飞行时，风会影响飞行姿态和飞行方向。
+5. 顺风时，鞘翅速度略微增加。
+6. 逆风时，鞘翅速度下降。
+7. 侧风时，鞘翅飞行方向会被轻微偏移。
+8. 极端风暴中，玩家可能会失控偏航。
+9. 所有效果必须可在 config.yml 中开关和调节强度。
+
+请监听 PlayerMoveEvent 或使用定时任务，并使用 Bukkit Vector 来实现风对玩家速度的影响。
+
+注意性能优化：
+
+* 不要每 tick 对所有玩家做重计算。
+* 使用定时任务，例如每 5 tick 或 10 tick 更新一次。
+* 只处理在线玩家。
+* 只处理生存/冒险模式玩家。
+* 管理员权限玩家可以绕过风影响。
+
+四、区域天气系统
+
+插件必须支持区域天气。
+
+区域天气要求：
+
+1. 每个区域可以设置独立天气。
+2. 每个区域可以设置独立风速。
+3. 每个区域可以设置独立风向。
+4. 每个区域可以设置危险等级。
+5. 每个区域可以设置持续时间。
+6. 每个区域可以启用或禁用方块破坏。
+7. 区域数据保存到 regions.yml。
+8. 区域可以通过游戏内指令创建。
+9. 区域也可以通过网页控制台地图画框创建。
+10. 区域形状第一版支持矩形区域即可。
+
+区域数据结构示例：
+
+regions:
+main-island:
+world: world
+min-x: -250
+max-x: 250
+min-z: -250
+max-z: 250
+weather: HEAVY_RAIN
+wind-speed: 70
+wind-direction: NE
+danger-level: HIGH
+duration-minutes: 30
+block-damage-enabled: false
+
+五、网页控制台
+
+插件必须内置一个轻量级网页控制台。
+
+网页控制台要求：
+
+1. 插件启动后内置 HTTP Server。
+2. 不依赖外部 Web 服务。
+3. 默认监听地址：0.0.0.0
+4. 默认端口：8765
+5. 监听地址和端口可在 config.yml 修改。
+6. 网页控制台可以开启或关闭。
+7. 前端文件由插件自动释放到 plugins/IslandStorm/web。
+8. 网页控制台必须有登录页面。
+9. 登录成功后进入控制台页面。
+10. 必须有 session/token 鉴权机制。
+11. 未登录不得访问 API。
+12. API 必须验证权限。
+13. 密码不能明文存储。
+
+网页控制台主要功能：
+
+1. 查看当前全局天气。
+2. 查看当前风速和风向。
+3. 查看未来天气预报。
+4. 强制更改全局天气。
+5. 强制更改全局风速和风向。
+6. 查看所有已配置区域。
+7. 新建区域天气。
+8. 修改区域天气。
+9. 删除区域天气。
+10. 生成 HTML 天气预览卡。
+11. 设置台风路径。
+12. 设置极端风暴路径。
+13. 设置方块破坏强度。
+14. 查看插件运行状态。
+15. 查看在线玩家数量。
+16. 查看服务器 TPS，如果 Paper API 可获取。
+17. 查看世界列表。
+18. 查看某个世界的地图预览。
+
+六、网页控制台地图功能
+
+网页控制台必须支持读取世界地图并在网页中显示简化地图。
+
+第一版可以不做完整卫星地图，但必须实现以下功能：
+
+1. 读取指定世界的区域坐标范围。
+2. 在网页中显示一个 2D 地图画布。
+3. 地图使用 X/Z 坐标平面。
+4. 支持缩放。
+5. 支持拖动。
+6. 支持显示坐标网格。
+7. 支持显示世界边界或配置的地图范围。
+8. 支持显示已经创建的天气区域。
+9. 支持鼠标拖拽画矩形框。
+10. 画框后弹出区域天气设置面板。
+11. 用户可以设置：
+
+    * 区域名称
+    * 天气类型
+    * 风速
+    * 风向
+    * 持续时间
+    * 是否启用方块破坏
+    * 破坏强度
+12. 保存后写入 regions.yml。
+13. 保存后立即应用到服务器。
+
+如果无法直接渲染真实地图方块颜色，第一版允许使用简化地图：
+
+* 深蓝色代表海洋
+* 绿色代表陆地
+* 灰色代表未知区域
+* 区域框用蓝色/红色边框显示
+* 危险天气区域使用红色半透明覆盖
+
+但是代码结构要预留未来接入 BlueMap / Pl3xMap / Dynmap 的接口。
+
+请设计接口：
+
+MapProvider
+
+* VanillaMapProvider
+* BlueMapProviderPlaceholder
+* DynmapProviderPlaceholder
+
+七、网页控制台鉴权机制
+
+必须新增独立配置文件：
+
+web-users.yml
+
+用于存放网页控制台用户。
+
+要求：
+
+1. 支持多个用户。
+2. 每个用户有独立密码 hash。
+3. 每个用户有独立权限列表。
+4. 不允许明文密码。
+5. 默认生成一个 admin 用户。
+6. 默认密码不要直接写死为明文。
+7. README 中说明如何用指令生成密码 hash。
+8. 支持通过游戏后台命令创建用户、修改密码、删除用户。
+9. 使用 BCrypt 或 PBKDF2 进行密码 hash。
+10. 如果不想引入外部依赖，使用 Java 原生 PBKDF2WithHmacSHA256。
+11. 登录成功后生成随机 token。
+12. token 有过期时间。
+13. token 过期时间可配置。
+14. API 请求需要携带 token。
+15. token 存在内存中即可，重启后失效。
+
+web-users.yml 示例：
+
+users:
+admin:
+password-hash: "PBKDF2$sha256$100000$salt$hash"
+permissions:
+- "*"
+director:
+password-hash: "PBKDF2$sha256$100000$salt$hash"
+permissions:
+- "weather.view"
+- "weather.set"
+- "region.view"
+- "region.set"
+- "html.generate"
+viewer:
+password-hash: "PBKDF2$sha256$100000$salt$hash"
+permissions:
+- "weather.view"
+- "region.view"
+
+网页权限节点：
+
+weather.view
+weather.set
+wind.view
+wind.set
+forecast.view
+region.view
+region.create
+region.edit
+region.delete
+storm.path.view
+storm.path.edit
+blockdamage.view
+blockdamage.edit
+html.generate
+server.status
+user.manage
+map.view
+
+八、网页控制台 API
+
+请实现 REST 风格 API。
+
+示例：
+
+POST /api/login
+POST /api/logout
+GET /api/status
+GET /api/weather
+POST /api/weather/set
+POST /api/wind/set
+GET /api/forecast
+GET /api/regions
+POST /api/regions/create
+POST /api/regions/update
+POST /api/regions/delete
+GET /api/worlds
+GET /api/map?world=world
+POST /api/storm/path/set
+GET /api/storm/path
+POST /api/html/generate
+GET /api/users
+POST /api/users/create
+POST /api/users/password
+POST /api/users/delete
+
+所有 API 返回 JSON。
+
+九、台风与极端风暴路径系统
+
+TYPHOON 和 EXTREME_STORM 必须支持横移路径。
+
+路径要求：
+
+1. 路径由多个点组成。
+2. 点使用世界坐标 X/Z。
+3. 每个点可以设置预计到达时间。
+4. 风暴中心会按照路径随时间移动。
+5. 风暴有影响半径。
+6. 风暴半径内玩家受到风影响。
+7. 风暴中心附近风力更强。
+8. 风暴路径可以通过指令设置。
+9. 风暴路径可以通过网页控制台地图拖拽设置。
+10. 网页地图上要显示风暴路径线和当前风暴中心位置。
+11. 风暴路径数据保存到 storm-paths.yml。
+
+路径配置示例：
+
+storms:
+typhoon-001:
+type: TYPHOON
+world: world
+active: true
+radius: 180
+block-damage-enabled: true
+block-damage-level: 2
+points:
+- x: -500
+z: 200
+arrive-after-seconds: 0
+- x: -100
+z: 120
+arrive-after-seconds: 600
+- x: 300
+z: 60
+arrive-after-seconds: 1200
+
+十、方块破坏系统
+
+台风和极端风暴可以破坏方块。
+
+要求：
+
+1. 只有 TYPHOON 和 EXTREME_STORM 默认允许破坏方块。
+2. 区域天气可以独立开关方块破坏。
+3. 风暴路径可以独立开关方块破坏。
+4. 破坏程度可配置。
+5. 破坏方块需要性能安全。
+6. 不允许一次性扫描大量方块。
+7. 使用分批任务。
+8. 每次只随机检查少量方块。
+9. 可以配置每次检查方块数量。
+10. 可以配置破坏概率。
+11. 可以配置最大 Y 范围。
+12. 可以配置保护方块黑名单。
+13. 可以配置只破坏指定白名单方块。
+14. 默认不要破坏箱子、床、命令方块、屏障、结构方块、刷怪笼、末影箱、潜影盒。
+15. 默认不要破坏 WorldGuard 区域内方块，如果检测到 WorldGuard 存在，需要预留 Hook；第一版可以做占位 Hook，不强制依赖 WorldGuard。
+16. 破坏前触发自定义事件，允许其他插件取消。
+17. 破坏效果可以选择：
+
+    * 直接变空气
+    * 掉落物品
+    * 变成掉落方块 FallingBlock
+18. 所有效果可在 config.yml 调节。
+
+破坏等级建议：
+
+level 0：不破坏
+level 1：只破坏树叶、草、花、火把
+level 2：破坏玻璃、木板、栅栏、作物
+level 3：破坏部分泥土、沙子、羊毛、轻质方块
+level 4：破坏更多自然方块
+level 5：高破坏，不建议默认开启
+
+十一、游戏内指令系统
+
+必须同时提供客户端玩家可用指令和服务端后台指令。
+
+主指令：
+
+/islandstorm
+别名：/storm /weatherplus /isweather
+
+必须支持：
+
+/storm help
+/storm reload
+/storm status
+/storm setweather <weatherType> [duration]
+/storm setwind <speed> <direction>
+/storm forecast
+/storm html
+/storm html open
+/storm debug
+/storm bypass <player>
+
+区域指令：
+
+/storm region list
+/storm region create <name> <world> <minX> <minZ> <maxX> <maxZ> <weatherType>
+/storm region delete <name>
+/storm region setweather <name> <weatherType>
+/storm region setwind <name> <speed> <direction>
+/storm region damage <name> <true|false> <level>
+
+风暴路径指令：
+
+/storm path create <id> <TYPHOON|EXTREME_STORM> <world> <radius>
+/storm path addpoint <id> <x> <z> <arriveAfterSeconds>
+/storm path start <id>
+/storm path stop <id>
+/storm path delete <id>
+/storm path list
+
+网页用户管理指令：
+
+/storm webuser create <username> <password>
+/storm webuser passwd <username> <password>
+/storm webuser delete <username>
+/storm webuser list
+/storm webuser grant <username> <permission>
+/storm webuser revoke <username> <permission>
+
+十二、Bukkit 权限节点
+
+请设计 Bukkit 权限系统：
+
+islandstorm.admin
+拥有全部权限。
+
+islandstorm.reload
+允许重载插件。
+
+islandstorm.status
+允许查看天气状态。
+
+islandstorm.setweather
+允许强制更改天气。
+
+islandstorm.setwind
+允许强制更改风速风向。
+
+islandstorm.forecast
+允许查看天气预报。
+
+islandstorm.html
+允许生成 HTML 天气卡。
+
+islandstorm.bypass
+允许绕过风影响。
+
+islandstorm.debug
+允许查看调试信息。
+
+islandstorm.region
+允许管理区域天气。
+
+islandstorm.path
+允许管理风暴路径。
+
+islandstorm.webuser
+允许管理网页控制台用户。
+
+十三、配置文件要求
+
+config.yml 必须包含：
+
+1. 当前天气默认设置
+2. 自动天气循环开关
+3. 天气随机权重
+4. 风速影响倍率
+5. 鞘翅影响倍率
+6. 地面推动倍率
+7. 极端天气是否允许吹飞玩家
+8. HTML 输出目录
+9. HTML 文件名
+10. 是否启用天气广播
+11. 广播提前预警时间
+12. 性能设置
+13. 调试模式
+14. 网页控制台开关
+15. 网页控制台监听地址
+16. 网页控制台端口
+17. token 过期时间
+18. 地图范围默认设置
+19. 方块破坏设置
+20. 风暴路径设置
+
+示例配置结构：
+
+weather:
+auto-cycle: true
+default-weather: CLEAR
+default-duration-minutes: 30
+
+wind:
+enabled: true
+default-speed: 15
+default-direction: NE
+ground-effect-enabled: true
+elytra-effect-enabled: true
+push-multiplier: 0.015
+elytra-multiplier: 0.035
+dangerous-speed: 90
+extreme-speed: 120
+allow-blow-away: true
+bypass-permission: islandstorm.bypass
+
+web:
+enabled: true
+bind: "0.0.0.0"
+port: 8765
+token-expire-minutes: 120
+static-folder: "plugins/IslandStorm/web"
+
+map:
+default-world: "world"
+min-x: -1000
+max-x: 1000
+min-z: -1000
+max-z: 1000
+provider: "vanilla"
+
+block-damage:
+enabled: true
+interval-ticks: 40
+checks-per-run: 80
+default-mode: "FALLING_BLOCK"
+max-y: 120
+min-y: 50
+chance:
+level-1: 0.05
+level-2: 0.10
+level-3: 0.18
+level-4: 0.25
+level-5: 0.35
+blacklist:
+- CHEST
+- TRAPPED_CHEST
+- ENDER_CHEST
+- SHULKER_BOX
+- COMMAND_BLOCK
+- CHAIN_COMMAND_BLOCK
+- REPEATING_COMMAND_BLOCK
+- BARRIER
+- STRUCTURE_BLOCK
+- SPAWNER
+- BEDROCK
+
+html:
+enabled: true
+output-folder: "plugins/IslandStorm/html"
+file-name: "weather-preview.html"
+blue-theme: true
+auto-generate-on-weather-change: true
+
+performance:
+update-interval-ticks: 10
+only-affect-survival: true
+
+十四、HTML 天气预览卡
+
+插件必须可以输出一个精美的 HTML 文件。
+
+风格要求：
+
+* 蓝色配色
+* 类似体育比赛赛事天气预览卡
+* 现代化 UI
+* 适合 OBS 浏览器源显示
+* 16:9 横向布局
+* 深蓝渐变背景
+* 半透明卡片
+* 大号天气标题
+* 当前天气图标
+* 风速
+* 风向
+* 危险等级
+* 能见度
+* 天气描述
+* 未来天气预报列表
+* 更新时间
+* 服务器名
+
+HTML 文件需要包含完整 CSS，不依赖外部 CDN，方便离线使用。
+
+十五、天气预报系统
+
+插件需要生成未来 3 个天气预报。
+
+预报内容包括：
+
+* 天气类型
+* 预计开始时间
+* 预计持续时间
+* 预计风速
+* 预计风向
+* 危险等级
+
+天气切换时自动刷新预报。
+
+十六、广播系统
+
+当天气变化时广播：
+
+[IslandStorm] 天气变化：当前天气已变为 暴雨，风速 65 km/h，风向 NE。
+
+危险天气前广播预警：
+
+[IslandStorm] 气象预警：预计 5 分钟后将出现 台风，请玩家寻找安全区域。
+
+十七、代码结构要求
+
+请使用清晰的 Java 包结构：
+
+studio.cyanbukkit.islandstorm
+├── IslandStormPlugin.java
+├── command
+│   └── StormCommand.java
+├── weather
+│   ├── WeatherType.java
+│   ├── WeatherState.java
+│   ├── WeatherManager.java
+│   └── ForecastEntry.java
+├── wind
+│   ├── WindDirection.java
+│   ├── WindState.java
+│   └── WindManager.java
+├── region
+│   ├── WeatherRegion.java
+│   └── RegionManager.java
+├── storm
+│   ├── StormPath.java
+│   ├── StormPathPoint.java
+│   ├── StormPathManager.java
+│   └── StormMovementTask.java
+├── damage
+│   ├── BlockDamageManager.java
+│   ├── BlockDamageLevel.java
+│   ├── BlockDamageMode.java
+│   └── StormBlockDamageEvent.java
+├── web
+│   ├── WebServerManager.java
+│   ├── WebAuthManager.java
+│   ├── WebUser.java
+│   ├── WebPermission.java
+│   ├── PasswordHasher.java
+│   ├── SessionToken.java
+│   └── api
+│       ├── ApiRouter.java
+│       ├── AuthApiHandler.java
+│       ├── WeatherApiHandler.java
+│       ├── RegionApiHandler.java
+│       ├── MapApiHandler.java
+│       ├── StormPathApiHandler.java
+│       └── UserApiHandler.java
+├── map
+│   ├── MapProvider.java
+│   ├── VanillaMapProvider.java
+│   ├── BlueMapProviderPlaceholder.java
+│   └── DynmapProviderPlaceholder.java
+├── html
+│   └── HtmlWeatherCardGenerator.java
+├── config
+│   └── ConfigManager.java
+├── task
+│   ├── WeatherCycleTask.java
+│   ├── WindEffectTask.java
+│   └── BlockDamageTask.java
+├── util
+│   ├── JsonUtil.java
+│   ├── TimeUtil.java
+│   └── MessageUtil.java
+└── listener
+└── PlayerListener.java
+
+十八、开发要求
+
+1. 必须使用 Java 21。
+2. 必须使用 Paper API 1.20.6。
+3. 代码要有注释。
+4. 所有指令要有 TabComplete。
+5. 所有错误输入都要有提示。
+6. 重载不能导致任务重复运行。
+7. 插件 disable 时要保存状态并取消任务。
+8. HTML 生成失败要在控制台输出错误。
+9. 不要使用数据库，第一版只使用 YAML 配置。
+10. 不要依赖 ProtocolLib。
+11. 不要依赖外部网页资源。
+12. 不要使用 NMS。
+13. 尽量使用 Bukkit/Paper API 实现。
+14. 网页控制台可以使用 Java 内置 HttpServer。
+15. JSON 可以使用 Gson 或 Jackson。
+16. 密码 hash 使用 PBKDF2WithHmacSHA256 或 BCrypt。
+17. 如果使用外部依赖，必须在 build.gradle.kts 中正确 shade 或说明。
+18. 不允许把网页用户密码明文写入配置。
+19. 默认 admin 用户如果无法生成安全 hash，请在首次启动时生成随机临时密码并打印到控制台。
+20. 破坏方块功能默认关闭，需要管理员明确开启。
+
+十九、最终输出要求
+
+请一次性输出完整项目代码。
+
+二十、小时级天气预报 HTML 卡片
+
+插件必须额外生成一个“小时级天气预报 HTML 卡片”。
+
+该卡片风格要求：
+
+1. 类似中央电视台天气预报 / 电视台气象栏目预报风格。
+2. 蓝色、深蓝、白色为主色调。
+3. 适合 OBS 浏览器源显示。
+4. 支持 16:9 横向布局。
+5. 支持大屏展示。
+6. 有电视栏目感和赛事直播感。
+7. 不能只是普通表格。
+8. 必须包含完整 CSS，不依赖外部 CDN。
+9. 所有资源必须本地化。
+10. 自动输出到 plugins/IslandStorm/html/hourly-forecast.html。
+
+小时级天气预报卡片必须显示：
+
+* 服务器名称
+* 当前世界名称
+* 当前现实时间
+* 当前 Minecraft 时间
+* 当前天气
+* 当前风速
+* 当前风向
+* 当前危险等级
+* 未来逐小时天气预报
+* 每小时天气图标
+* 每小时天气名称
+* 每小时风速
+* 每小时风向
+* 每小时危险等级
+* 每小时 MC 时间
+* 每小时现实时间
+* 更新时间
+
+小时级预报默认生成未来 24 小时。
+
+每个小时卡片示例：
+
+20:00 / MC 13000 ticks
+雷暴
+风速 82 km/h
+风向 NE
+危险等级 High
+
+HTML 视觉要求：
+
+1. 顶部标题栏：
+
+   * IslandStorm Hourly Forecast
+   * 100H Island Survival
+   * 当前更新时间
+
+2. 中央主天气区：
+
+   * 当前天气大图标
+   * 当前天气名称
+   * 当前温度感 / 危险等级
+   * 当前风速风向
+
+3. 下方小时预报条：
+
+   * 横向滚动或网格显示
+   * 每小时一个卡片
+   * 图标 + 时间 + 天气 + 风速 + 风向 + 危险等级
+   * 高危险天气用红色或橙色强调
+   * 普通天气用蓝色/白色强调
+
+4. 右侧信息区：
+
+   * 当前世界
+   * 当前 MC 时间
+   * 当前现实时间
+   * 天气持续时间
+   * 下一次天气变化时间
+
+5. 背景：
+
+   * 深蓝渐变
+   * 半透明玻璃卡片
+   * 光效线条
+   * 电视天气预报风格
+
+要求实现两个 HTML 输出：
+
+1. weather-preview.html
+   用于当前天气预览卡，类似体育赛事天气预览卡。
+
+2. hourly-forecast.html
+   用于未来逐小时天气预报卡，类似中央电视台天气预报卡。
+
+两个 HTML 都要支持指令生成：
+
+/storm html
+生成当前天气预览卡。
+
+/storm html forecast
+生成小时级天气预报卡。
+
+/storm html all
+同时生成两个 HTML。
+
+网页控制台也必须支持：
+
+* 生成当前天气预览卡
+* 生成小时级天气预报卡
+* 预览当前天气卡
+* 预览小时天气预报卡
+
+二十一、时间系统：同时支持现实时间和 Minecraft 时间
+
+插件中所有涉及时间的地方，都必须同时支持：
+
+1. 现实世界时间
+2. Minecraft 游戏时间
+
+所有时间设置都必须可以选择使用：
+
+* REAL_TIME
+* MC_TIME
+
+时间单位必须支持：
+
+现实时间：
+
+* s
+* m
+* h
+* d
+
+Minecraft 时间：
+
+* tick
+* ticks
+* mcminute
+* mchour
+* mcday
+
+时间表达示例：
+
+/storm setweather HEAVY_RAIN 30m REAL_TIME
+表示现实 30 分钟。
+
+/storm setweather HEAVY_RAIN 6h MC_TIME
+表示 Minecraft 时间 6 小时。
+
+/storm setweather CLEAR 1mcday MC_TIME
+表示 Minecraft 一天。
+
+/storm path addpoint typhoon-001 -500 200 10m REAL_TIME
+表示现实 10 分钟后到达该点。
+
+/storm path addpoint typhoon-001 -500 200 6h MC_TIME
+表示 Minecraft 6 小时后到达该点。
+
+如果用户不写时间类型，默认使用 config.yml 中的默认时间模式。
+
+config.yml 需要新增：
+
+time:
+default-mode: REAL_TIME
+minecraft-day-ticks: 24000
+sync-forecast-with-world-time: true
+real-time-zone: "Asia/Tokyo"
+display-real-time-format: "HH:mm"
+display-mc-time-format: "HH:mm"
+show-both-time-in-html: true
+show-both-time-in-chat: true
+
+所有涉及持续时间、开始时间、到达时间、预警时间、预报时间的功能，都必须支持 REAL_TIME 和 MC_TIME：
+
+1. 天气持续时间
+2. 天气预报时间
+3. 小时天气预报
+4. 台风路径点到达时间
+5. 极端风暴路径点到达时间
+6. 广播预警时间
+7. HTML 更新时间
+8. 区域天气持续时间
+9. 网页控制台时间选择
+10. API 时间参数
+11. 配置文件时间参数
+
+必须新增 TimeMode 枚举：
+
+REAL_TIME
+MC_TIME
+
+必须新增 GameTimeUtil 工具类，用于：
+
+1. 解析时间字符串。
+2. 将现实时间转换为毫秒。
+3. 将 Minecraft 时间转换为 ticks。
+4. 将 Minecraft ticks 转换为 HH:mm 显示。
+5. 将 Minecraft ticks 转换为现实等价显示。
+6. 生成 HTML 中的双时间显示。
+7. 判断某个计划任务是否到期。
+
+时间解析要求：
+
+30s REAL_TIME
+30m REAL_TIME
+1h REAL_TIME
+1d REAL_TIME
+1200ticks MC_TIME
+1mcminute MC_TIME
+6mchour MC_TIME
+1mcday MC_TIME
+
+请注意 Minecraft 时间换算：
+
+1 Minecraft day = 24000 ticks
+1 Minecraft hour = 1000 ticks
+1 Minecraft minute ≈ 16.6667 ticks
+
+如果涉及现实时间和 MC 时间转换，请在代码注释中说明。
+
+二十二、小时级天气预报数据结构
+
+必须新增 HourlyForecastEntry 类。
+
+字段包括：
+
+* index
+* weatherType
+* displayName
+* icon
+* realStartTime
+* realEndTime
+* mcStartTick
+* mcEndTick
+* windSpeed
+* windDirection
+* dangerLevel
+* visibility
+* description
+* timeMode
+
+必须新增 HourlyForecastManager 类。
+
+功能：
+
+1. 生成未来 24 小时预报。
+2. 根据 config.yml 可调整生成小时数。
+3. 支持按现实小时生成。
+4. 支持按 Minecraft 小时生成。
+5. 天气变化时刷新。
+6. 区域天气变化时刷新。
+7. 提供给 HTML 生成器和网页 API 使用。
+
+config.yml 新增：
+
+forecast:
+hourly-enabled: true
+hourly-count: 24
+hourly-step:
+value: 1
+unit: "h"
+mode: REAL_TIME
+regenerate-on-weather-change: true
+regenerate-on-region-change: true
+
+网页 API 新增：
+
+GET /api/forecast/hourly
+获取小时级天气预报 JSON。
+
+POST /api/html/generate/hourly
+生成小时级 HTML 预报卡。
+
+POST /api/html/generate/all
+生成全部 HTML。
+
+游戏指令新增：
+
+/storm forecast hourly
+查看小时级天气预报。
+
+/storm html forecast
+生成小时级天气预报 HTML。
+
+/storm html all
+生成全部 HTML。
+
+二十三、网页控制台时间选择 UI
+
+网页控制台所有涉及时间的表单都必须加入时间模式选择：
+
+1. 时间数值输入框。
+2. 时间单位下拉框。
+3. 时间模式下拉框：
+
+   * REAL_TIME
+   * MC_TIME
+
+涉及页面：
+
+* 全局天气设置
+* 区域天气设置
+* 台风路径设置
+* 极端风暴路径设置
+* 天气预报设置
+* 预警广播设置
+* HTML 生成设置
+
+网页控制台显示时间时必须同时显示：
+
+* 现实时间
+* Minecraft 时间
+
+例如：
+
+预计到达：
+现实时间：20:35
+MC 时间：第 3 天 14:20
+
+天气持续：
+现实时间：30 分钟
+MC 时间：1.5 天
+
+二十四、代码结构新增要求
+
+请在原代码结构基础上新增：
+
+studio.cyanbukkit.islandstorm
+├── time
+│   ├── TimeMode.java
+│   ├── ParsedDuration.java
+│   └── GameTimeUtil.java
+├── forecast
+│   ├── HourlyForecastEntry.java
+│   └── HourlyForecastManager.java
+
+并修改：
+
+html
+└── HtmlWeatherCardGenerator.java
+
+使其同时支持：
+
+* generateWeatherPreview()
+* generateHourlyForecast()
+* generateAll()
+
+二十五、最终要求补充
+
+请确保：
+
+1. 所有时间功能都不能只支持现实时间。
+2. 所有涉及时间的地方都必须同时支持 REAL_TIME 和 MC_TIME。
+3. HTML 中必须同时显示现实时间和 Minecraft 时间。
+4. 小时级天气预报必须是独立 HTML。
+5. 小时级天气预报必须有电视天气预报风格。
+6. 网页控制台必须可以生成和预览小时级天气预报 HTML。
+7. 所有新增指令必须有权限和 TabComplete。
+8. README 必须说明 REAL_TIME 和 MC_TIME 的区别。
+9. README 必须列出时间格式示例。
+10. 如果一次回复放不下，请按模块分批输出，并明确每一批包含哪些文件。
+
+重点：所有时间系统必须双轨制，现实时间和 Minecraft 时间都要支持，不能只写现实时间。
+
+输出格式：
+
+1. 先给项目目录结构。
+2. 然后逐个文件输出代码。
+3. 每个文件都用 Markdown 代码块。
+4. 文件路径必须写清楚。
+5. 最后给出编译方法和安装方法。
+
+安装方法：
+
+把 build/libs/IslandStorm-x.x.x.jar 放进服务器 plugins 文件夹，然后重启服务器。
+
+请确保代码完整、可编译、可运行。
+
+非常重要：
+不要只给示例代码。
+不要省略任何文件。
+不要用“其余代码类似”。
+不要只写核心类。
+我要完整项目源码。
+如果一次回复放不下，请按模块分批输出，并明确每一批包含哪些文件。

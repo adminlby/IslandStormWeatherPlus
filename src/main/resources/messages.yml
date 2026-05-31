@@ -1,0 +1,15 @@
+# IslandStorm 文案（支持 & 颜色代码；占位符形如 {weather} {speed} {direction} {time}）
+prefix: "&b[IslandStorm]&r "
+
+# 通用
+no-permission: "&c你没有权限执行该操作。"
+player-only: "&c该指令只能由玩家执行。"
+reloaded: "&a配置已重载。"
+unknown-subcommand: "&c未知子指令，使用 &f/storm help &c查看帮助。"
+invalid-number: "&c无效的数字：&f{input}"
+unknown-weather: "&c未知天气类型：&f{input}"
+unknown-direction: "&c未知风向：&f{input}（可用 N NE E SE S SW W NW）"
+
+# 天气广播
+weather-changed: "&f天气变化：当前天气已变为 &b{weather}&f，风速 &b{speed} km/h&f，风向 &b{direction}&f。"
+weather-warn: "&e气象预警：预计 &c{time}&e 后将出现 &c{weather}&e，请玩家寻找安全区域。"

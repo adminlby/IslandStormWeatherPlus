@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IslandStorm 控制台 · 登录</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-bg">
+<div class="login-card">
+    <div class="login-logo">🌀 IslandStorm</div>
+    <div class="login-sub">高级人工天气系统 · 控制台</div>
+    <form id="loginForm">
+        <label>用户名</label>
+        <input type="text" id="username" autocomplete="username" required>
+        <label>密码</label>
+        <input type="password" id="password" autocomplete="current-password" required>
+        <button type="submit">登录</button>
+        <div class="login-error" id="error"></div>
+    </form>
+    <div class="login-foot">100H Island Survival</div>
+</div>
+<script>
+    // 已登录则直接进控制台
+    if (localStorage.getItem('IST_TOKEN')) {
+        location.href = 'console.html';
+    }
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const err = document.getElementById('error');
+        err.textContent = '';
+        try {
+            const res = await fetch('api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                err.textContent = data.message || '登录失败';
+                return;
+            }
+            localStorage.setItem('IST_TOKEN', data.token);
+            localStorage.setItem('IST_USER', data.username);
+            localStorage.setItem('IST_PERMS', JSON.stringify(data.permissions || []));
+            location.href = 'console.html';
+        } catch (ex) {
+            err.textContent = '网络错误：' + ex;
+        }
+    });
+</script>
+</body>
+</html>

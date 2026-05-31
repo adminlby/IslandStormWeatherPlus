@@ -1,0 +1,63 @@
+name: IslandStorm
+version: '${project.version}'
+main: io.lbynb.islandstorm.IslandStormPlugin
+api-version: '1.20'
+load: POSTWORLD
+authors: [ lbynb_awa ]
+description: 高级人工天气系统（风/区域/台风/方块破坏/网页控制台/HTML 预报卡）
+
+commands:
+  islandstorm:
+    description: IslandStorm 主指令
+    usage: /islandstorm help
+    aliases: [ storm, weatherplus, isweather ]
+
+permissions:
+  islandstorm.admin:
+    description: 拥有全部 IslandStorm 权限
+    default: op
+    children:
+      islandstorm.reload: true
+      islandstorm.status: true
+      islandstorm.setweather: true
+      islandstorm.setwind: true
+      islandstorm.forecast: true
+      islandstorm.html: true
+      islandstorm.bypass: true
+      islandstorm.debug: true
+      islandstorm.region: true
+      islandstorm.path: true
+      islandstorm.webuser: true
+  islandstorm.reload:
+    description: 允许重载插件
+    default: op
+  islandstorm.status:
+    description: 允许查看天气状态
+    default: true
+  islandstorm.setweather:
+    description: 允许强制更改天气
+    default: op
+  islandstorm.setwind:
+    description: 允许强制更改风速风向
+    default: op
+  islandstorm.forecast:
+    description: 允许查看天气预报
+    default: true
+  islandstorm.html:
+    description: 允许生成 HTML 天气卡
+    default: op
+  islandstorm.bypass:
+    description: 允许绕过风影响
+    default: op
+  islandstorm.debug:
+    description: 允许查看调试信息
+    default: op
+  islandstorm.region:
+    description: 允许管理区域天气
+    default: op
+  islandstorm.path:
+    description: 允许管理风暴路径
+    default: op
+  islandstorm.webuser:
+    description: 允许管理网页控制台用户
+    default: op

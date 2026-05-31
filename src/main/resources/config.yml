@@ -1,0 +1,135 @@
+# ============================================================
+#  IslandStorm 主配置
+#  天气系统为「纯人工控制」：天气只来自 指令 / 后台 / 网页控制台 / 本配置预设。
+#  不接入外部天气 API、不做现实天气换算、不做随机生成算法。
+# ============================================================
+
+# 服务器显示名（用于广播与 HTML 卡片）
+server-name: "IslandStorm 100H Island Survival"
+
+# 调试模式：开启后输出更多日志
+debug: false
+
+# ---------------- 天气 ----------------
+weather:
+  # 纯人工模式下不启用随机生成；保留此项仅为兼容，置 true 也不会随机出天气
+  auto-cycle: false
+  default-weather: CLEAR
+  default-duration-minutes: 30
+  # 当前天气到期行为：切到“预报/排期”的下一条；排期为空则回落 default-weather（方案 C）
+  on-expire: NEXT_SCHEDULED
+  broadcast-enabled: true
+  # 危险天气提前预警时间（现实秒）
+  warn-before-seconds: 300
+
+# ---------------- 原版天气同步（混合模式） ----------------
+vanilla-sync:
+  # GLOBAL=全局同步 / REGIONAL=按区域同步 / INDEPENDENT=完全不动原版
+  mode: GLOBAL
+  per-weather:
+    CLEAR: true
+    CLOUDY: false
+    RAIN: true
+    HEAVY_RAIN: true
+    THUNDERSTORM: true
+    FOG: false
+    WINDY: false
+    TYPHOON: true
+    EXTREME_STORM: true
+
+# ---------------- 风系统 ----------------
+wind:
+  enabled: true
+  default-speed: 15          # km/h
+  default-direction: NE
+  ground-effect-enabled: true
+  elytra-effect-enabled: true
+  push-multiplier: 0.015
+  elytra-multiplier: 0.035
+  dangerous-speed: 90
+  extreme-speed: 120
+  allow-blow-away: true
+  bypass-permission: islandstorm.bypass
+
+# ---------------- 网页控制台 ----------------
+web:
+  enabled: true
+  bind: "0.0.0.0"
+  port: 8765
+  token-expire-minutes: 120
+  static-folder: "plugins/IslandStorm/web"
+
+# ---------------- 地图 ----------------
+map:
+  default-world: "world"
+  min-x: -1000
+  max-x: 1000
+  min-z: -1000
+  max-z: 1000
+  provider: "vanilla"        # vanilla | bluemap | dynmap（后两者第一版为占位）
+
+# ---------------- 方块破坏 ----------------
+block-damage:
+  enabled: false             # 默认关闭，需管理员显式开启
+  interval-ticks: 40
+  checks-per-run: 80
+  horizontal-radius: 24      # 以玩家为中心的水平抽查半径
+  default-mode: "FALLING_BLOCK"   # AIR | DROP | FALLING_BLOCK
+  max-y: 120
+  min-y: 50
+  chance:
+    level-1: 0.05
+    level-2: 0.10
+    level-3: 0.18
+    level-4: 0.25
+    level-5: 0.35
+  blacklist:
+    - CHEST
+    - TRAPPED_CHEST
+    - ENDER_CHEST
+    - SHULKER_BOX
+    - COMMAND_BLOCK
+    - CHAIN_COMMAND_BLOCK
+    - REPEATING_COMMAND_BLOCK
+    - BARRIER
+    - STRUCTURE_BLOCK
+    - SPAWNER
+    - BEDROCK
+  whitelist: []
+
+# ---------------- HTML 天气卡 ----------------
+html:
+  enabled: true
+  output-folder: "plugins/IslandStorm/html"
+  file-name: "weather-preview.html"
+  hourly-file-name: "hourly-forecast.html"
+  blue-theme: true
+  auto-generate-on-weather-change: true
+
+# ---------------- 时间系统（双轨：现实时间 / MC 时间） ----------------
+time:
+  default-mode: REAL_TIME    # REAL_TIME | MC_TIME
+  minecraft-day-ticks: 24000
+  sync-forecast-with-world-time: true
+  real-time-zone: "Asia/Shanghai"
+  display-real-time-format: "HH:mm"
+  display-mc-time-format: "HH:mm"
+  show-both-time-in-html: true
+  show-both-time-in-chat: true
+
+# ---------------- 天气预报 ----------------
+forecast:
+  count: 3                   # 普通预报条数
+  hourly-enabled: true
+  hourly-count: 24
+  hourly-step:
+    value: 1
+    unit: "h"
+    mode: REAL_TIME
+  regenerate-on-weather-change: true
+  regenerate-on-region-change: true
+
+# ---------------- 性能 ----------------
+performance:
+  update-interval-ticks: 10
+  only-affect-survival: true

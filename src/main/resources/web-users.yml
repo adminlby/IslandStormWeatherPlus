@@ -1,0 +1,17 @@
+# 网页控制台用户
+# 密码以 PBKDF2 哈希存储，禁止明文。
+# 首次启动若此文件无任何用户，将自动创建 admin 并在控制台打印随机临时密码。
+#
+# 用游戏/后台指令管理：
+#   /storm webuser create <用户名> <密码>
+#   /storm webuser passwd <用户名> <新密码>
+#   /storm webuser delete <用户名>
+#   /storm webuser grant <用户名> <权限节点>
+#   /storm webuser revoke <用户名> <权限节点>
+#
+# 权限节点示例： "*"（全部）, weather.view, weather.set, region.view, region.create,
+#   region.edit, region.delete, storm.path.view, storm.path.edit, blockdamage.view,
+#   blockdamage.edit, html.generate, server.status, user.manage, map.view, wind.view,
+#   wind.set, forecast.view
+
+users: {}

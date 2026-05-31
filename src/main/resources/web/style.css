@@ -1,0 +1,115 @@
+/* IslandStorm 控制台样式 —— 深蓝主题，无外部 CDN */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+    --bg0:#071427; --bg1:#0c2440; --bg2:#12345f;
+    --card:rgba(18,52,95,0.55); --line:rgba(120,180,255,0.18);
+    --accent:#3fa9ff; --accent2:#58e1ff; --text:#dce9ff; --muted:#8fb4e0;
+    --danger:#f85149; --warn:#f0883e; --ok:#3fb950;
+}
+body {
+    font-family:"Segoe UI","Microsoft YaHei",sans-serif;
+    color:var(--text);
+    background:linear-gradient(135deg,#071427 0%,#0c2440 55%,#103a66 100%);
+    min-height:100vh;
+}
+
+/* 登录 */
+.login-bg { display:flex; align-items:center; justify-content:center; }
+.login-card {
+    margin-top:12vh; width:340px; padding:36px 30px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    backdrop-filter:blur(8px); box-shadow:0 18px 50px rgba(0,0,0,0.45); text-align:center;
+}
+.login-logo { font-size:30px; font-weight:700; color:var(--accent2); }
+.login-sub { color:var(--muted); margin:6px 0 24px; font-size:13px; }
+.login-card label { display:block; text-align:left; font-size:12px; color:var(--muted); margin:12px 0 6px; }
+.login-card input {
+    width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line);
+    background:rgba(7,20,39,0.6); color:var(--text); font-size:14px;
+}
+.login-card button {
+    margin-top:22px; width:100%; padding:12px; border:none; border-radius:8px; cursor:pointer;
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04203f; font-weight:700; font-size:15px;
+}
+.login-card button:hover { filter:brightness(1.08); }
+.login-error { color:var(--danger); font-size:13px; margin-top:12px; min-height:18px; }
+.login-foot { margin-top:20px; color:var(--muted); font-size:11px; letter-spacing:1px; }
+
+/* 控制台框架 */
+.topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 24px; background:rgba(7,20,39,0.7); border-bottom:1px solid var(--line);
+    position:sticky; top:0; z-index:10;
+}
+.topbar .brand { font-size:20px; font-weight:700; color:var(--accent2); }
+.topbar .right { display:flex; align-items:center; gap:16px; font-size:13px; color:var(--muted); }
+.topbar button {
+    background:rgba(248,81,73,0.15); color:var(--danger); border:1px solid rgba(248,81,73,0.4);
+    padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;
+}
+.wrap { max-width:1280px; margin:0 auto; padding:22px; }
+.grid { display:grid; grid-template-columns:repeat(12,1fr); gap:18px; }
+.card {
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px;
+    backdrop-filter:blur(6px);
+}
+.card h2 { font-size:15px; color:var(--accent2); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.col-12 { grid-column:span 12; } .col-8 { grid-column:span 8; } .col-6 { grid-column:span 6; }
+.col-4 { grid-column:span 4; } .col-3 { grid-column:span 3; }
+@media (max-width:980px){ .grid>* { grid-column:span 12 !important; } }
+
+/* 状态徽标 */
+.stat-row { display:flex; flex-wrap:wrap; gap:14px; }
+.stat { flex:1; min-width:120px; background:rgba(7,20,39,0.45); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+.stat .k { font-size:11px; color:var(--muted); } .stat .v { font-size:22px; font-weight:700; color:var(--accent2); margin-top:4px; }
+
+/* 当前天气大卡 */
+.weather-now { display:flex; align-items:center; gap:18px; }
+.weather-now .icon { font-size:60px; }
+.weather-now .info .name { font-size:26px; font-weight:700; }
+.weather-now .info .meta { color:var(--muted); margin-top:6px; font-size:13px; }
+
+/* 表单 */
+label.f { display:block; font-size:12px; color:var(--muted); margin:10px 0 5px; }
+input.f, select.f {
+    width:100%; padding:9px 10px; border-radius:7px; border:1px solid var(--line);
+    background:rgba(7,20,39,0.6); color:var(--text); font-size:13px;
+}
+.row { display:flex; gap:10px; } .row > * { flex:1; }
+button.act {
+    margin-top:14px; padding:10px 14px; border:none; border-radius:8px; cursor:pointer;
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#04203f; font-weight:700; font-size:13px;
+}
+button.act:hover { filter:brightness(1.08); }
+button.ghost {
+    background:rgba(63,169,255,0.12); color:var(--accent2); border:1px solid var(--line);
+    padding:8px 12px; border-radius:7px; cursor:pointer; font-size:12px; margin:4px 4px 0 0;
+}
+
+/* 表格 */
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+th { color:var(--muted); font-weight:600; font-size:12px; }
+.tag { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; }
+
+/* 预报条 */
+.fc-strip { display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; }
+.fc-item { min-width:96px; background:rgba(7,20,39,0.45); border:1px solid var(--line); border-radius:10px; padding:10px; text-align:center; }
+.fc-item .t { font-size:11px; color:var(--muted); } .fc-item .ic { font-size:26px; margin:4px 0; }
+.fc-item .nm { font-size:12px; } .fc-item .wd { font-size:11px; color:var(--muted); margin-top:3px; }
+
+/* 地图 */
+#mapCanvas { width:100%; height:460px; background:#04162c; border-radius:10px; border:1px solid var(--line); display:block; cursor:grab; }
+.map-tools { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
+.map-hint { color:var(--muted); font-size:12px; margin-top:8px; }
+
+/* 弹层 */
+.modal-bg { position:fixed; inset:0; background:rgba(2,8,20,0.6); display:none; align-items:center; justify-content:center; z-index:50; }
+.modal-bg.show { display:flex; }
+.modal { width:420px; max-width:92vw; background:#0c2440; border:1px solid var(--line); border-radius:14px; padding:22px; }
+.modal h3 { color:var(--accent2); margin-bottom:12px; }
+.modal .close { float:right; cursor:pointer; color:var(--muted); }
+.toast { position:fixed; right:22px; bottom:22px; background:#103a66; border:1px solid var(--line); color:var(--text);
+    padding:12px 16px; border-radius:8px; font-size:13px; opacity:0; transition:opacity .25s; z-index:80; }
+.toast.show { opacity:1; }
+.danger-text { color:var(--danger); } .ok-text { color:var(--ok); } .muted { color:var(--muted); }
