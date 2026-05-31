@@ -1,0 +1,39 @@
+name: Syntax & Compile Check
+
+# 快速语法/编译门禁：只做 `mvn compile`，不打包、不 shade，秒级反馈。
+# 用于功能分支推送时尽快暴露语法错误；main 与 PR 走完整的 build.yml。
+
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - 'src/**'
+      - 'pom.xml'
+      - '.github/workflows/compile-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: Maven compile (JDK 21)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compile (fast syntax gate)
+        run: mvn -B -ntp clean compile
