@@ -1,0 +1,50 @@
+name: CodeQL
+
+# GitHub CodeQL 静态分析：在编译期追踪代码，检测潜在 bug 与安全问题。
+# 比单纯编译更深入，是 MC 插件仓库常见的自动检查之一。
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # 每周一 05:23 UTC 定时全量扫描
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (Java)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          queries: security-and-quality
+
+      # 手动构建：用项目自身的 JDK 21 + Maven，确保与本地一致
+      - name: Build for analysis
+        run: mvn -B -ntp clean compile
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java-kotlin"

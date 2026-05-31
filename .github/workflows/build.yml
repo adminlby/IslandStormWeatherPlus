@@ -1,0 +1,51 @@
+name: Build & Package
+
+# 完整构建：clean package（含 shade 重定位 Gson），并把产出的插件 jar 作为制品上传。
+# 这是「能否构建出可用插件」的核心检查。
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/dependabot.yml'
+      - 'LICENSE'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (JDK 21)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn -B -ntp clean package
+
+      - name: Upload plugin jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: IslandStorm-plugin
+          # 只取最终插件 jar；shade 产生的 original-*.jar 不以 IslandStorm- 开头，自动排除
+          path: target/IslandStorm-*.jar
+          if-no-files-found: error
+          retention-days: 14
