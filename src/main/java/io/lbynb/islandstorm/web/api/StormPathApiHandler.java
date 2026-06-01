@@ -28,6 +28,12 @@ public class StormPathApiHandler {
 
     /** GET /api/storm/path → 所有风暴路径（含当前中心与中心处分区天气）。 */
     public Object get() {
+        // 构建过程会触及世界/区域/风暴/天气数据（Bukkit.getWorld、effectiveWindAt 会遍历活动区域与风暴），
+        // 必须切回主线程读取，避免与主线程任务（StormMovementTask、区域增删等）竞态。见 ApiSupport 文档。
+        return ApiSupport.runSync(plugin, this::buildStormsResponse);
+    }
+
+    private Map<String, Object> buildStormsResponse() {
         List<Map<String, Object>> list = new ArrayList<>();
         long now = System.currentTimeMillis();
         for (StormPath p : plugin.stormPathManager().all()) {
