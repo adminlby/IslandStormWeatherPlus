@@ -97,6 +97,21 @@ public class ConfigManager {
         return cfg.getDouble("wind.elytra-multiplier", 0.035);
     }
 
+    /** 地面推力强度：风速归一化后乘以它得到每次速度增量。 */
+    public double windGroundStrength() {
+        return cfg.getDouble("wind.ground-strength", 0.18);
+    }
+
+    /** 鞘翅推力强度（弯折飞行路径）。 */
+    public double windElytraStrength() {
+        return cfg.getDouble("wind.elytra-strength", 0.12);
+    }
+
+    /** 施加风力的间隔(tick)。 */
+    public int windEffectIntervalTicks() {
+        return Math.max(1, cfg.getInt("wind.effect-interval-ticks", 4));
+    }
+
     public double dangerousSpeed() {
         return cfg.getDouble("wind.dangerous-speed", 90);
     }
@@ -291,5 +306,30 @@ public class ConfigManager {
 
     public boolean onlyAffectSurvival() {
         return cfg.getBoolean("performance.only-affect-survival", true);
+    }
+
+    // ---- 风粒子 ----
+    public boolean particlesEnabled() {
+        return cfg.getBoolean("particles.enabled", true);
+    }
+
+    public double particlesMinSpeed() {
+        return cfg.getDouble("particles.min-speed", 25);
+    }
+
+    public int particlesCount() {
+        return Math.max(0, cfg.getInt("particles.count", 10));
+    }
+
+    public int particlesIntervalTicks() {
+        return Math.max(1, cfg.getInt("particles.interval-ticks", 3));
+    }
+
+    public double particlesRadius() {
+        return Math.max(1.0, cfg.getDouble("particles.radius", 6));
+    }
+
+    public String particlesType() {
+        return cfg.getString("particles.type", "CLOUD");
     }
 }

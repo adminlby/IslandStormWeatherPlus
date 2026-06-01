@@ -14,6 +14,7 @@ import io.lbynb.islandstorm.task.BlueMapSyncTask;
 import io.lbynb.islandstorm.task.StormMovementTask;
 import io.lbynb.islandstorm.task.WeatherCycleTask;
 import io.lbynb.islandstorm.task.WindEffectTask;
+import io.lbynb.islandstorm.task.WindParticleTask;
 import io.lbynb.islandstorm.time.GameTimeUtil;
 import io.lbynb.islandstorm.util.MessageUtil;
 import io.lbynb.islandstorm.weather.WeatherManager;
@@ -175,8 +176,10 @@ public final class IslandStormPlugin extends JavaPlugin {
 
     private void startTasks() {
         stopTasks(); // 双保险：避免重复调度
-        int windInterval = Math.max(1, configManager.updateIntervalTicks());
+        int windInterval = configManager.windEffectIntervalTicks();
         tasks.add(new WindEffectTask(configManager, windManager).runTaskTimer(this, windInterval, windInterval));
+        int particleInterval = configManager.particlesIntervalTicks();
+        tasks.add(new WindParticleTask(configManager, windManager).runTaskTimer(this, particleInterval, particleInterval));
         tasks.add(new WeatherCycleTask(weatherManager).runTaskTimer(this, 20L, 20L));
         tasks.add(new StormMovementTask(stormPathManager).runTaskTimer(this, 20L, 20L));
         int dmgInterval = Math.max(1, configManager.blockDamageIntervalTicks());
