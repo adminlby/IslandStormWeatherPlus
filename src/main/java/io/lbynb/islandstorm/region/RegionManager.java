@@ -54,8 +54,7 @@ public class RegionManager {
             WindDirection windDir = WindDirection.fromString(s.getString("wind-direction"),
                     weather.defaultWindDirection());
             DangerLevel danger = DangerLevel.fromString(s.getString("danger-level"), weather.dangerLevel());
-            boolean dmg = s.getBoolean("block-damage-enabled", false);
-            int dmgLevel = s.getInt("block-damage-level", weather.defaultDamageLevel());
+            // 区域不再含方块破坏（block-damage-* 为旧字段，读取时忽略）
             int durMin = s.getInt("duration-minutes", 0); // 0 = 永久
             long end = durMin <= 0 ? -1 : now + durMin * 60_000L;
 
@@ -64,7 +63,7 @@ public class RegionManager {
                     s.getString("world", "world"),
                     s.getInt("min-x"), s.getInt("min-z"),
                     s.getInt("max-x"), s.getInt("max-z"),
-                    weather, windSpeed, windDir, danger, dmg, dmgLevel, end);
+                    weather, windSpeed, windDir, danger, end);
             regions.put(name.toLowerCase(), region);
         }
     }
@@ -83,8 +82,6 @@ public class RegionManager {
             yml.set(base + ".wind-speed", r.windSpeed());
             yml.set(base + ".wind-direction", r.windDirection().name());
             yml.set(base + ".danger-level", r.dangerLevel().name());
-            yml.set(base + ".block-damage-enabled", r.blockDamageEnabled());
-            yml.set(base + ".block-damage-level", r.blockDamageLevel());
             long remainMin = r.endEpochMillis() <= 0 ? 0 : Math.max(0, (r.endEpochMillis() - now) / 60_000L);
             yml.set(base + ".duration-minutes", remainMin);
         }

@@ -8,7 +8,8 @@ import org.bukkit.Location;
 /**
  * 矩形区域天气（第一版只支持矩形，按 X/Z 平面圈定，不限 Y）。
  *
- * <p>每个区域可独立设置天气、风速、风向、危险等级、持续时长与是否允许方块破坏。
+ * <p>每个区域可独立设置天气、风速、风向、危险等级与持续时长。
+ * <b>区域不含方块破坏</b>——方块破坏与破坏等级是台风/风暴（StormPath）独有，区域天气不能设。
  * 数据持久化到 regions.yml。{@code endEpochMillis<=0} 表示永久有效。</p>
  */
 public class WeatherRegion {
@@ -24,16 +25,13 @@ public class WeatherRegion {
     private double windSpeed;
     private WindDirection windDirection;
     private DangerLevel dangerLevel;
-    private boolean blockDamageEnabled;
-    private int blockDamageLevel;
 
     /** 绝对到期时间（现实毫秒）；<=0 表示永久。 */
     private long endEpochMillis;
 
     public WeatherRegion(String name, String world, int minX, int minZ, int maxX, int maxZ,
                          WeatherType weather, double windSpeed, WindDirection windDirection,
-                         DangerLevel dangerLevel, boolean blockDamageEnabled, int blockDamageLevel,
-                         long endEpochMillis) {
+                         DangerLevel dangerLevel, long endEpochMillis) {
         this.name = name;
         this.world = world;
         // 归一化，保证 min<=max
@@ -45,8 +43,6 @@ public class WeatherRegion {
         this.windSpeed = windSpeed;
         this.windDirection = windDirection;
         this.dangerLevel = dangerLevel;
-        this.blockDamageEnabled = blockDamageEnabled;
-        this.blockDamageLevel = blockDamageLevel;
         this.endEpochMillis = endEpochMillis;
     }
 
@@ -129,22 +125,6 @@ public class WeatherRegion {
 
     public void setDangerLevel(DangerLevel dangerLevel) {
         this.dangerLevel = dangerLevel;
-    }
-
-    public boolean blockDamageEnabled() {
-        return blockDamageEnabled;
-    }
-
-    public void setBlockDamageEnabled(boolean blockDamageEnabled) {
-        this.blockDamageEnabled = blockDamageEnabled;
-    }
-
-    public int blockDamageLevel() {
-        return blockDamageLevel;
-    }
-
-    public void setBlockDamageLevel(int blockDamageLevel) {
-        this.blockDamageLevel = blockDamageLevel;
     }
 
     public long endEpochMillis() {

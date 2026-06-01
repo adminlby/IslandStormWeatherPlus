@@ -180,16 +180,8 @@
             <div><label class="f">风速</label><input class="f" id="rmWindSpeed" type="number" value="40"></div>
             <div><label class="f">风向</label><select class="f" id="rmWindDir"></select></div>
         </div>
-        <div class="row">
-            <div>
-                <label class="f">持续(分钟,0=永久)</label><input class="f" id="rmDuration" type="number" value="30">
-            </div>
-            <div>
-                <label class="f">方块破坏</label>
-                <select class="f" id="rmDamage"><option value="false">关闭</option><option value="true">开启</option></select>
-            </div>
-            <div><label class="f">破坏等级</label><input class="f" id="rmDamageLevel" type="number" value="0" min="0" max="5"></div>
-        </div>
+        <label class="f">持续(分钟, 0=永久)</label><input class="f" id="rmDuration" type="number" value="30">
+        <p class="muted" style="font-size:12px;margin-top:6px">矩形区域不含台风/极端风暴与方块破坏——这些是「风暴路径」专属。</p>
         <button class="act" id="rmSave">保存区域</button>
     </div>
 </div>

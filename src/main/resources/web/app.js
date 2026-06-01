@@ -5,6 +5,8 @@ const IST = (function () {
     if (!token) location.href = 'login.html';
 
     const WEATHER_TYPES = ['CLEAR','CLOUDY','RAIN','HEAVY_RAIN','THUNDERSTORM','FOG','WINDY','TYPHOON','EXTREME_STORM'];
+    // 区域天气不含台风/极端风暴（这两个是风暴路径专属）
+    const REGION_WEATHER_TYPES = WEATHER_TYPES.filter(t => t !== 'TYPHOON' && t !== 'EXTREME_STORM');
     const DIRS = ['N','NE','E','SE','S','SW','W','NW'];
 
     function hasPerm(p) { return perms.includes('*') || perms.includes(p); }
@@ -261,9 +263,7 @@ const IST = (function () {
                 weather: document.getElementById('rmWeather').value,
                 windSpeed: +document.getElementById('rmWindSpeed').value,
                 windDirection: document.getElementById('rmWindDir').value,
-                durationMinutes: +document.getElementById('rmDuration').value,
-                blockDamageEnabled: document.getElementById('rmDamage').value === 'true',
-                blockDamageLevel: +document.getElementById('rmDamageLevel').value
+                durationMinutes: +document.getElementById('rmDuration').value
             });
             toast('区域已创建'); closeModal(); loadRegions();
         } catch (e) { toast(e.message, false); }
@@ -327,7 +327,7 @@ const IST = (function () {
 
         fillSelect('setWeatherType', WEATHER_TYPES);
         fillSelect('windDir', DIRS);
-        fillSelect('rmWeather', WEATHER_TYPES);
+        fillSelect('rmWeather', REGION_WEATHER_TYPES);
         fillSelect('rmWindDir', DIRS);
 
         const bind = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };

@@ -89,7 +89,7 @@ public final class IslandStormPlugin extends JavaPlugin {
         windManager.setStormPathManager(stormPathManager);
 
         this.blockDamageManager =
-                new BlockDamageManager(this, configManager, regionManager, stormPathManager, weatherManager);
+                new BlockDamageManager(this, configManager, stormPathManager, weatherManager);
 
         this.htmlGenerator = new HtmlWeatherCardGenerator(this, configManager);
         // 天气变化自动生成 HTML（若开启），由 WeatherManager 在广播后回调

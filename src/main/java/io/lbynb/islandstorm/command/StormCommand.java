@@ -283,7 +283,7 @@ public class StormCommand implements CommandExecutor, TabCompleter {
     private boolean region(CommandSender s, String[] a) {
         if (noPerm(s, "islandstorm.region")) return true;
         if (a.length < 2) {
-            MessageUtil.send(s, "&c用法：/storm region <list|create|delete|setweather|setwind|damage> ...");
+            MessageUtil.send(s, "&c用法：/storm region <list|create|delete|setweather|setwind> ...");
             return true;
         }
         switch (a[1].toLowerCase()) {
@@ -292,8 +292,7 @@ public class StormCommand implements CommandExecutor, TabCompleter {
                 for (WeatherRegion r : plugin.regionManager().all()) {
                     MessageUtil.raw(s, "&f" + r.name() + " &7@" + r.world() + " [" + r.minX() + "," + r.minZ()
                             + " ~ " + r.maxX() + "," + r.maxZ() + "] &b" + r.weather().displayName()
-                            + " &7风 " + (int) r.windSpeed() + " " + r.windDirection().name()
-                            + (r.blockDamageEnabled() ? " &c破坏L" + r.blockDamageLevel() : ""));
+                            + " &7风 " + (int) r.windSpeed() + " " + r.windDirection().name());
                 }
                 return true;
             }
@@ -318,9 +317,12 @@ public class StormCommand implements CommandExecutor, TabCompleter {
                             "&c未知天气类型：&f{input}"), "input", a[8]));
                     return true;
                 }
+                if (type == WeatherType.TYPHOON || type == WeatherType.EXTREME_STORM) {
+                    MessageUtil.send(s, "&c区域不能使用台风/极端风暴天气，请用 /storm path 创建风暴路径。");
+                    return true;
+                }
                 WeatherRegion r = new WeatherRegion(a[2], a[3], minX, minZ, maxX, maxZ, type,
-                        type.defaultWindSpeed(), type.defaultWindDirection(), type.dangerLevel(),
-                        false, type.defaultDamageLevel(), -1);
+                        type.defaultWindSpeed(), type.defaultWindDirection(), type.dangerLevel(), -1);
                 plugin.regionManager().add(r);
                 MessageUtil.send(s, "&a已创建区域 &b" + a[2] + " &a天气 &b" + type.displayName());
                 return true;
@@ -353,6 +355,10 @@ public class StormCommand implements CommandExecutor, TabCompleter {
                             "&c未知天气类型：&f{input}"), "input", a[3]));
                     return true;
                 }
+                if (type == WeatherType.TYPHOON || type == WeatherType.EXTREME_STORM) {
+                    MessageUtil.send(s, "&c区域不能使用台风/极端风暴天气，请用 /storm path 创建风暴路径。");
+                    return true;
+                }
                 r.setWeather(type);
                 plugin.regionManager().save();
                 MessageUtil.send(s, "&a区域 &b" + r.name() + " &a天气已设为 &b" + type.displayName());
@@ -378,28 +384,6 @@ public class StormCommand implements CommandExecutor, TabCompleter {
                 r.setWindDirection(dir);
                 plugin.regionManager().save();
                 MessageUtil.send(s, "&a区域 &b" + r.name() + " &a风已设为 &b" + (int) (double) sp + " " + dir.name());
-                return true;
-            }
-            case "damage": {
-                if (a.length < 5) {
-                    MessageUtil.send(s, "&c用法：/storm region damage <名称> <true|false> <等级0-5>");
-                    return true;
-                }
-                WeatherRegion r = plugin.regionManager().get(a[2]);
-                if (r == null) {
-                    MessageUtil.send(s, "&c区域不存在：&f" + a[2]);
-                    return true;
-                }
-                boolean enabled = Boolean.parseBoolean(a[3]);
-                Integer level = parseInt(a[4]);
-                if (level == null || level < 0 || level > 5) {
-                    MessageUtil.send(s, "&c破坏等级须为 0-5。");
-                    return true;
-                }
-                r.setBlockDamageEnabled(enabled);
-                r.setBlockDamageLevel(level);
-                plugin.regionManager().save();
-                MessageUtil.send(s, "&a区域 &b" + r.name() + " &a方块破坏：&b" + enabled + " &aL" + level);
                 return true;
             }
             default:
@@ -701,16 +685,15 @@ public class StormCommand implements CommandExecutor, TabCompleter {
 
     private List<String> regionTab(String[] a) {
         if (a.length == 2) {
-            return filter(Arrays.asList("list", "create", "delete", "setweather", "setwind", "damage"), a[1]);
+            return filter(Arrays.asList("list", "create", "delete", "setweather", "setwind"), a[1]);
         }
         String op = a[1].toLowerCase();
         if (a.length == 3 && !op.equals("create") && !op.equals("list")) {
             return filter(regionNames(), a[2]);
         }
-        if (op.equals("setweather") && a.length == 4) return filter(weatherNames(), a[3]);
+        if (op.equals("setweather") && a.length == 4) return filter(regionWeatherNames(), a[3]);
         if (op.equals("setwind") && a.length == 5) return filter(directionNames(), a[4]);
-        if (op.equals("create") && a.length == 9) return filter(weatherNames(), a[8]);
-        if (op.equals("damage") && a.length == 4) return filter(Arrays.asList("true", "false"), a[3]);
+        if (op.equals("create") && a.length == 9) return filter(regionWeatherNames(), a[8]);
         return new ArrayList<>();
     }
 
@@ -778,6 +761,16 @@ public class StormCommand implements CommandExecutor, TabCompleter {
     private static List<String> weatherNames() {
         List<String> l = new ArrayList<>();
         for (WeatherType t : WeatherType.values()) l.add(t.name());
+        return l;
+    }
+
+    /** 区域可用天气名（排除台风/极端风暴——这两个是风暴路径专属）。 */
+    private static List<String> regionWeatherNames() {
+        List<String> l = new ArrayList<>();
+        for (WeatherType t : WeatherType.values()) {
+            if (t == WeatherType.TYPHOON || t == WeatherType.EXTREME_STORM) continue;
+            l.add(t.name());
+        }
         return l;
     }
 
