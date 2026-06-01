@@ -132,6 +132,34 @@ public class StormPath {
         this.pausedElapsedMillis = 0;
     }
 
+    /**
+     * 重启/重载后恢复运行时状态：续接同一时间基准继续计时（含暂停状态），
+     * 避免风暴在 reload/重启后被悄悄停掉（导致台风不下雨、不破坏、预报不显示）。
+     * {@code startEpochMillis<=0} 视为未启动，不恢复。
+     */
+    public void restore(long startEpochMillis, boolean paused, long pausedElapsedMillis) {
+        if (startEpochMillis <= 0) return;
+        this.startEpochMillis = startEpochMillis;
+        this.active = true;
+        this.paused = paused;
+        this.pausedElapsedMillis = Math.max(0, pausedElapsedMillis);
+    }
+
+    /** 暂停时冻结的「已用时长」（毫秒）；用于持久化恢复。 */
+    public long pausedElapsedMillis() {
+        return pausedElapsedMillis;
+    }
+
+    /**
+     * 给定现实时间，该风暴是否「正在进行」（active 且处于路径时间窗 [0, total] 内）。
+     * 暂停时时间冻结，按冻结的已用时长判断。用于原版天气同步与小时预报叠加。
+     */
+    public boolean isOngoingAt(long nowMillis) {
+        if (!active || points.isEmpty() || startEpochMillis <= 0) return false;
+        long elapsed = paused ? pausedElapsedMillis : (nowMillis - startEpochMillis);
+        return elapsed >= 0 && elapsed <= totalMillis();
+    }
+
     /** 停止路径：置为非 active（可重新 start）。 */
     public void stop() {
         this.active = false;

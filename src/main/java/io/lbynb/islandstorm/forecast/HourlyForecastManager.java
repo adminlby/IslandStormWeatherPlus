@@ -1,6 +1,7 @@
 package io.lbynb.islandstorm.forecast;
 
 import io.lbynb.islandstorm.config.ConfigManager;
+import io.lbynb.islandstorm.storm.StormPathManager;
 import io.lbynb.islandstorm.time.GameTimeUtil;
 import io.lbynb.islandstorm.time.ParsedDuration;
 import io.lbynb.islandstorm.weather.ForecastEntry;
@@ -30,13 +31,16 @@ public class HourlyForecastManager {
     private final WeatherManager weather;
     private final WindManager wind;
     private final ForecastManager forecast;
+    private final StormPathManager storms;
 
     public HourlyForecastManager(ConfigManager config, WeatherManager weather,
-                                 WindManager wind, ForecastManager forecast) {
+                                 WindManager wind, ForecastManager forecast,
+                                 StormPathManager storms) {
         this.config = config;
         this.weather = weather;
         this.wind = wind;
         this.forecast = forecast;
+        this.storms = storms;
     }
 
     /** 时间线上的一段：某天气在 [start,end) 的真实毫秒偏移内有效（end=MAX 表示无限）。 */
@@ -55,6 +59,7 @@ public class HourlyForecastManager {
         World w = resolveWorld();
         long fullNow = (w != null) ? w.getFullTime() : 0L;
 
+        String forecastWorld = (w != null) ? w.getName() : config.mapDefaultWorld();
         List<Segment> segs = buildTimeline(now);
         List<HourlyForecastEntry> out = new ArrayList<>();
         for (int k = 0; k < count; k++) {
@@ -64,8 +69,21 @@ public class HourlyForecastManager {
             long realEnd = realStart + step;
             long mcStart = fullNow + off / TICK_MS;
             long mcEnd = mcStart + step / TICK_MS;
-            out.add(new HourlyForecastEntry(k, s.type, realStart, realEnd, mcStart, mcEnd,
-                    s.windSpeed, s.dir, s.type.dangerLevel(), config.timeDefaultMode()));
+
+            // 风暴叠加：该时段若处于某活动台风/极端风暴的时间窗内，则显示风暴天气（覆盖排期，
+            // 因为风暴是更强的天气事件），让小时预报在风暴期间不再「始终晴天」。
+            WeatherType type = s.type;
+            double windSpeed = s.windSpeed;
+            WindDirection dir = s.dir;
+            WeatherType stormType = (storms != null) ? storms.ongoingStormTypeAt(realStart, forecastWorld) : null;
+            if (stormType != null) {
+                type = stormType;
+                windSpeed = stormType.defaultWindSpeed();
+                dir = stormType.defaultWindDirection();
+            }
+
+            out.add(new HourlyForecastEntry(k, type, realStart, realEnd, mcStart, mcEnd,
+                    windSpeed, dir, type.dangerLevel(), config.timeDefaultMode()));
         }
         return out;
     }

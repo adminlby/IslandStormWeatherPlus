@@ -40,6 +40,8 @@ public class StormPathManager {
         ConfigurationSection root = yml.getConfigurationSection("storms");
         if (root == null) return;
 
+        boolean needSave = false;
+        long now = System.currentTimeMillis();
         for (String id : root.getKeys(false)) {
             ConfigurationSection s = root.getConfigurationSection(id);
             if (s == null) continue;
@@ -59,9 +61,26 @@ public class StormPathManager {
                 double ptRadius = m.containsKey("radius") ? toDouble(m.get("radius")) : 0;
                 path.addPoint(new StormPathPoint(x, z, sec * 1000L, intensity, ptRadius));
             }
-            // 持久化的 active 仅作记录；重启后需要重新 start 才计时，避免时间基准错乱。
+
+            // 恢复 active 与计时基准（含暂停状态）：重启/重载后让 active:true 的风暴真正继续运行。
+            // 之前把 active 仅作记录，导致 reload 后风暴悄悄停掉，台风不下雨、不破坏、预报不显示。
+            boolean active = s.getBoolean("active", false);
+            if (active && !path.points().isEmpty()) {
+                long startMs = s.getLong("start-epoch-millis", -1L);
+                boolean paused = s.getBoolean("paused", false);
+                long pausedElapsed = s.getLong("paused-elapsed-millis", 0L);
+                if (startMs > 0) {
+                    path.restore(startMs, paused, pausedElapsed);
+                } else {
+                    // 手动在文件里写了 active:true 但没有起点时间 → 从现在开始计时，并回写持久化。
+                    path.start(now);
+                    needSave = true;
+                }
+            }
             paths.put(id.toLowerCase(), path);
         }
+        // 把新生成的起点时间持久化，避免下次重载又被重置。
+        if (needSave) save();
     }
 
     public void save() {
@@ -71,6 +90,9 @@ public class StormPathManager {
             yml.set(base + ".type", p.type().name());
             yml.set(base + ".world", p.world());
             yml.set(base + ".active", p.active());
+            yml.set(base + ".start-epoch-millis", p.startEpochMillis());
+            yml.set(base + ".paused", p.paused());
+            yml.set(base + ".paused-elapsed-millis", p.pausedElapsedMillis());
             yml.set(base + ".radius", p.radius());
             yml.set(base + ".block-damage-enabled", p.blockDamageEnabled());
             yml.set(base + ".block-damage-level", p.blockDamageLevel());
@@ -143,6 +165,35 @@ public class StormPathManager {
             }
         }
         return best;
+    }
+
+    /** 该世界此刻是否有正在进行的风暴（active 且处于路径时间窗内）。 */
+    public boolean hasActiveStormIn(String world) {
+        return ongoingStormTypeAt(System.currentTimeMillis(), world) != null;
+    }
+
+    /**
+     * 给定现实时间，返回该世界「正在进行」的最强风暴类型（EXTREME_STORM 优先于 TYPHOON）；无则 null。
+     * 用于：原版天气同步（台风期间下雨打雷）与小时预报时间线叠加。
+     *
+     * <p>只看「时间窗」而非地理半径——雨/雷是世界级，原版打雷本身无法只在局部半径生效。</p>
+     */
+    public WeatherType ongoingStormTypeAt(long epochMillis, String world) {
+        WeatherType best = null;
+        for (StormPath p : paths.values()) {
+            if (world != null && !p.world().equals(world)) continue;
+            if (!p.isOngoingAt(epochMillis)) continue;
+            if (best == null || severity(p.type()) > severity(best)) {
+                best = p.type();
+            }
+        }
+        return best;
+    }
+
+    private static int severity(WeatherType t) {
+        if (t == WeatherType.EXTREME_STORM) return 2;
+        if (t == WeatherType.TYPHOON) return 1;
+        return 0;
     }
 
     /** 命中风暴的信息快照。 */

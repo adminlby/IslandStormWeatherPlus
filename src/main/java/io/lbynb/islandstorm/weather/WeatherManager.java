@@ -2,6 +2,7 @@ package io.lbynb.islandstorm.weather;
 
 import io.lbynb.islandstorm.IslandStormPlugin;
 import io.lbynb.islandstorm.config.ConfigManager;
+import io.lbynb.islandstorm.storm.StormPathManager;
 import io.lbynb.islandstorm.util.MessageUtil;
 import io.lbynb.islandstorm.wind.WindDirection;
 import io.lbynb.islandstorm.wind.WindManager;
@@ -22,6 +23,8 @@ public class WeatherManager {
     private final IslandStormPlugin plugin;
     private final ConfigManager config;
     private final WindManager wind;
+    /** 风暴源：台风/极端风暴活动期间强制原版下雨打雷。由主类注入；未注入则不影响。 */
+    private StormPathManager storms;
 
     private WeatherState current;
     /** 排期源：返回下一条排期，无则返回 null。默认空源。 */
@@ -48,6 +51,10 @@ public class WeatherManager {
 
     public WindManager wind() {
         return wind;
+    }
+
+    public void setStormPathManager(StormPathManager storms) {
+        this.storms = storms;
     }
 
     public void setScheduleSupplier(Supplier<ForecastEntry> supplier) {
@@ -82,18 +89,47 @@ public class WeatherManager {
         }
     }
 
-    /** 按混合模式把当前天气同步到原版天气。 */
+    /**
+     * 按混合模式把当前天气同步到原版天气。
+     *
+     * <p>GLOBAL 模式下 IslandStorm 对原版天气拥有完全控制权：</p>
+     * <ul>
+     *   <li>某世界存在「活动的台风/极端风暴」时，强制该世界下雨打雷（覆盖全局当前天气，
+     *       这样台风经过时玩家头顶才真的电闪雷鸣）；风暴结束后自动恢复。</li>
+     *   <li>否则按当前天气是否下雨/打雷同步；若该天气未配置同步（per-weather=false）则按晴空处理，
+     *       以保证风暴结束等切换时不会把原版天气「卡」在下雨。</li>
+     * </ul>
+     * <p>REGIONAL / INDEPENDENT 模式不在此处驱动原版天气。</p>
+     */
     public void applyVanilla() {
         if (current == null) return;
         VanillaSyncMode mode = config.vanillaSyncMode();
         // REGIONAL 由各区域驱动（P3）；INDEPENDENT 不动原版。
         if (mode != VanillaSyncMode.GLOBAL) return;
-        if (!config.vanillaSyncEnabledFor(current.type())) return;
 
-        boolean rain = current.type().isRain();
-        boolean thunder = current.type().isThunder();
+        boolean baseSync = config.vanillaSyncEnabledFor(current.type());
+        boolean curRain = current.type().isRain();
+        boolean curThunder = current.type().isThunder();
+
         for (World w : plugin.getServer().getWorlds()) {
             if (w.getEnvironment() != World.Environment.NORMAL) continue;
+
+            boolean stormActive = storms != null && storms.hasActiveStormIn(w.getName());
+            boolean rain;
+            boolean thunder;
+            if (stormActive) {
+                // 活动台风/极端风暴：强制下雨打雷。
+                rain = true;
+                thunder = true;
+            } else if (baseSync) {
+                rain = curRain;
+                thunder = curThunder;
+            } else {
+                // 当前天气未配置同步且无风暴 → 视为晴空（GLOBAL 模式完全控制原版天气）。
+                rain = false;
+                thunder = false;
+            }
+
             w.setStorm(rain);
             w.setThundering(thunder);
             // 用很长的持续时间「钉住」当前天气，避免原版天气循环来回切换。

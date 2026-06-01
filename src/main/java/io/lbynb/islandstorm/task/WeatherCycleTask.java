@@ -18,5 +18,8 @@ public class WeatherCycleTask extends BukkitRunnable {
     @Override
     public void run() {
         weather.tickCheck();
+        // 持续把「当前天气 + 活动风暴」同步到原版天气：台风/极端风暴在其活动期间持续下雨打雷，
+        // 结束后自动恢复。该调用是幂等的，仅在状态变化时才真正改变原版天气。
+        weather.applyVanilla();
     }
 }

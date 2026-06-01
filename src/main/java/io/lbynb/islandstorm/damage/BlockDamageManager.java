@@ -49,28 +49,41 @@ public class BlockDamageManager {
         }
     }
 
-    /** 计算某位置的有效破坏等级（取 风暴 / 全局天气 两者最大值）；0 表示不破坏。
-     *  注意：方块破坏只来源于台风/风暴与全局天气，<b>矩形区域不参与破坏</b>。 */
+    /**
+     * 计算某位置的有效破坏等级（取 风暴 / 全局天气 两者最大值）；0 表示不破坏。
+     * 注意：方块破坏只来源于台风/风暴与全局天气，<b>矩形区域不参与破坏</b>。
+     *
+     * <p>门控规则（业主拍板「勾选即生效」）：风暴路径上<b>显式勾选</b>的破坏是导演的明确意图，
+     * 独立生效，<b>不</b>受全局总开关 {@code block-damage.enabled} 限制；全局总开关此后只决定
+     * 「按当前天气类型的全服破坏」是否启用，作为更危险那部分的保险。</p>
+     */
     public int effectiveDamageLevelAt(Location loc) {
-        if (!config.blockDamageEnabled()) return 0;
         int level = 0;
 
+        // 风暴显式勾选：独立生效（台风/极端风暴路径上勾了破坏，进半径即破坏）
         StormPathManager.StormInfluence inf = storms.influenceAt(loc);
         if (inf != null && inf.storm.blockDamageEnabled()) {
             level = Math.max(level, inf.storm.blockDamageLevel());
         }
 
-        WeatherState cur = weather.current();
-        if (cur != null && cur.type().allowBlockDamage()) {
-            level = Math.max(level, cur.type().defaultDamageLevel());
+        // 按当前天气类型的全服破坏：仍受全局总开关限制（默认关，避免全服天气意外啃地形）
+        if (config.blockDamageEnabled()) {
+            WeatherState cur = weather.current();
+            if (cur != null && cur.type().allowBlockDamage()) {
+                level = Math.max(level, cur.type().defaultDamageLevel());
+            }
         }
         return level;
     }
 
-    /** 由 BlockDamageTask 调用：执行一轮抽查破坏，返回实际破坏的方块数。 */
+    /**
+     * 由 BlockDamageTask 调用：执行一轮抽查破坏，返回实际破坏的方块数。
+     *
+     * <p>不再用全局总开关一刀切短路——是否破坏完全交给 {@link #effectiveDamageLevelAt(Location)}
+     * 判定（风暴显式勾选独立生效，全局总开关只管天气类型那一档）。没有任何玩家处于破坏范围内时
+     * 下面会立即返回 0，开销极低。</p>
+     */
     public int runDamagePass() {
-        if (!config.blockDamageEnabled()) return 0;
-
         List<Player> targets = new ArrayList<>();
         List<Integer> levels = new ArrayList<>();
         for (Player p : Bukkit.getOnlinePlayers()) {
