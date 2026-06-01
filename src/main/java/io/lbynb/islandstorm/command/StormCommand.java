@@ -263,7 +263,9 @@ public class StormCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean bypass(CommandSender s, String[] a) {
-        if (noPerm(s, "islandstorm.bypass")) return true;
+        // 切换他人风影响绕过是「管理操作」，用专门的 manage 节点（默认 op），
+        // 与「自身免疫风」的 islandstorm.bypass（默认 false）分开，避免把免疫权当成了指令权。
+        if (noPerm(s, "islandstorm.bypass.manage")) return true;
         if (a.length < 2) {
             MessageUtil.send(s, "&c用法：/storm bypass <玩家>");
             return true;
