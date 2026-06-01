@@ -143,6 +143,26 @@ public class ApiRouter implements HttpHandler {
                 requirePost(method);
                 need(u, WebPermission.STORM_PATH_EDIT);
                 return storm.set(body);
+            case "/api/storm/path/start":
+                requirePost(method);
+                need(u, WebPermission.STORM_PATH_EDIT);
+                return storm.start(body);
+            case "/api/storm/path/pause":
+                requirePost(method);
+                need(u, WebPermission.STORM_PATH_EDIT);
+                return storm.pause(body);
+            case "/api/storm/path/resume":
+                requirePost(method);
+                need(u, WebPermission.STORM_PATH_EDIT);
+                return storm.resume(body);
+            case "/api/storm/path/stop":
+                requirePost(method);
+                need(u, WebPermission.STORM_PATH_EDIT);
+                return storm.stop(body);
+            case "/api/storm/path/delete":
+                requirePost(method);
+                need(u, WebPermission.STORM_PATH_EDIT);
+                return storm.delete(body);
 
             case "/api/html/generate":
                 requirePost(method);

@@ -413,7 +413,7 @@ public class StormCommand implements CommandExecutor, TabCompleter {
     private boolean path(CommandSender s, String[] a) {
         if (noPerm(s, "islandstorm.path")) return true;
         if (a.length < 2) {
-            MessageUtil.send(s, "&c用法：/storm path <list|create|addpoint|start|stop|delete> ...");
+            MessageUtil.send(s, "&c用法：/storm path <list|create|addpoint|start|pause|resume|stop|delete> ...");
             return true;
         }
         switch (a[1].toLowerCase()) {
@@ -500,6 +500,44 @@ public class StormCommand implements CommandExecutor, TabCompleter {
                 p.start(System.currentTimeMillis());
                 plugin.stormPathManager().save();
                 MessageUtil.send(s, "&a风暴 &b" + p.id() + " &a已启动。");
+                return true;
+            }
+            case "pause": {
+                if (a.length < 3) {
+                    MessageUtil.send(s, "&c用法：/storm path pause <id>");
+                    return true;
+                }
+                StormPath p = plugin.stormPathManager().get(a[2]);
+                if (p == null) {
+                    MessageUtil.send(s, "&c路径不存在：&f" + a[2]);
+                    return true;
+                }
+                if (!p.active() || p.paused()) {
+                    MessageUtil.send(s, "&c该风暴未在运行或已暂停。");
+                    return true;
+                }
+                p.pause(System.currentTimeMillis());
+                plugin.stormPathManager().save();
+                MessageUtil.send(s, "&e风暴 &b" + p.id() + " &e已暂停。");
+                return true;
+            }
+            case "resume": {
+                if (a.length < 3) {
+                    MessageUtil.send(s, "&c用法：/storm path resume <id>");
+                    return true;
+                }
+                StormPath p = plugin.stormPathManager().get(a[2]);
+                if (p == null) {
+                    MessageUtil.send(s, "&c路径不存在：&f" + a[2]);
+                    return true;
+                }
+                if (!p.paused()) {
+                    MessageUtil.send(s, "&c该风暴未处于暂停状态。");
+                    return true;
+                }
+                p.resume(System.currentTimeMillis());
+                plugin.stormPathManager().save();
+                MessageUtil.send(s, "&a风暴 &b" + p.id() + " &a已继续。");
                 return true;
             }
             case "stop": {
@@ -678,7 +716,7 @@ public class StormCommand implements CommandExecutor, TabCompleter {
 
     private List<String> pathTab(String[] a) {
         if (a.length == 2) {
-            return filter(Arrays.asList("list", "create", "addpoint", "start", "stop", "delete"), a[1]);
+            return filter(Arrays.asList("list", "create", "addpoint", "start", "pause", "resume", "stop", "delete"), a[1]);
         }
         String op = a[1].toLowerCase();
         if (a.length == 3 && !op.equals("create") && !op.equals("list")) {

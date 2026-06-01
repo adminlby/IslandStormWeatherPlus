@@ -48,13 +48,15 @@ public class StormPathManager {
                     s.getDouble("radius", type.defaultRadius()));
             path.setBlockDamageEnabled(s.getBoolean("block-damage-enabled", type.allowBlockDamage()));
             path.setBlockDamageLevel(s.getInt("block-damage-level", type.defaultDamageLevel()));
+            path.setCurved(s.getBoolean("curved", false));
 
             List<Map<?, ?>> pts = s.getMapList("points");
             for (Map<?, ?> m : pts) {
                 double x = toDouble(m.get("x"));
                 double z = toDouble(m.get("z"));
                 long sec = toLong(m.get("arrive-after-seconds"));
-                path.addPoint(new StormPathPoint(x, z, sec * 1000L));
+                double intensity = m.containsKey("intensity") ? toDouble(m.get("intensity")) : 1.0;
+                path.addPoint(new StormPathPoint(x, z, sec * 1000L, intensity));
             }
             // 持久化的 active 仅作记录；重启后需要重新 start 才计时，避免时间基准错乱。
             paths.put(id.toLowerCase(), path);
@@ -71,12 +73,14 @@ public class StormPathManager {
             yml.set(base + ".radius", p.radius());
             yml.set(base + ".block-damage-enabled", p.blockDamageEnabled());
             yml.set(base + ".block-damage-level", p.blockDamageLevel());
+            yml.set(base + ".curved", p.curved());
             List<Map<String, Object>> pts = new ArrayList<>();
             for (StormPathPoint pt : p.points()) {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("x", pt.x());
                 m.put("z", pt.z());
                 m.put("arrive-after-seconds", pt.arriveAfterSeconds());
+                m.put("intensity", pt.intensity());
                 pts.add(m);
             }
             yml.set(base + ".points", pts);
@@ -129,8 +133,8 @@ public class StormPathManager {
             double dz = loc.getZ() - c[1];
             double dist = Math.sqrt(dx * dx + dz * dz);
             if (dist > p.radius()) continue;
-            // 中心系数 2.0，边缘系数 ~0.2，线性插值
-            double factor = 0.2 + 1.8 * (1.0 - dist / Math.max(1.0, p.radius()));
+            // 中心系数 2.0，边缘系数 ~0.2，线性插值；再乘以当前段强度（每段可单独配置）
+            double factor = (0.2 + 1.8 * (1.0 - dist / Math.max(1.0, p.radius()))) * p.intensityAt(now);
             if (best == null || factor > best.factor) {
                 best = new StormInfluence(p, c[0], c[1], dist, factor);
             }

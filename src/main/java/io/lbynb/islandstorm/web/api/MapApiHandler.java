@@ -93,6 +93,10 @@ public class MapApiHandler {
             m.put("type", p.type().name());
             m.put("radius", p.radius());
             m.put("active", p.active());
+            m.put("paused", p.paused());
+            m.put("curved", p.curved());
+            // 跑完/停止的风暴（曾启动但当前非 active）不再在地图上显示路径线，等同「取消显示」
+            m.put("ended", p.startEpochMillis() > 0 && !p.active());
             List<Map<String, Object>> pts = new ArrayList<>();
             p.points().forEach(pt -> {
                 Map<String, Object> pm = new LinkedHashMap<>();

@@ -169,7 +169,11 @@ public class BlueMapHook {
     private void addStormMarkers(MarkerSet set, StormPath p, int markerY, long now) {
         Color orange = new Color(240, 136, 62, 1.0f);
 
-        // 预排路径线（无论是否启动都画，方便导演预览）
+        // 跑完/停止的风暴（曾启动但当前非 active）整体不画——到达终点即「取消显示」。
+        boolean ended = p.startEpochMillis() > 0 && !p.active();
+        if (ended) return;
+
+        // 预排路径线：未启动（预览）或正在运行时才画。
         if (p.points().size() >= 2) {
             List<Vector3d> pts = new ArrayList<>();
             for (StormPathPoint pt : p.points()) {
