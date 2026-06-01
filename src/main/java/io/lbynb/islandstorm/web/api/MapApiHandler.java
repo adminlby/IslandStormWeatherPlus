@@ -129,6 +129,7 @@ public class MapApiHandler {
                 center.put("x", c[0]);
                 center.put("z", c[1]);
                 m.put("center", center);
+                m.put("effectiveRadius", p.radiusAt(now)); // 当前段有效半径，地图据此画影响圈
             }
             list.add(m);
         });

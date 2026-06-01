@@ -56,7 +56,8 @@ public class StormPathManager {
                 double z = toDouble(m.get("z"));
                 long sec = toLong(m.get("arrive-after-seconds"));
                 double intensity = m.containsKey("intensity") ? toDouble(m.get("intensity")) : 1.0;
-                path.addPoint(new StormPathPoint(x, z, sec * 1000L, intensity));
+                double ptRadius = m.containsKey("radius") ? toDouble(m.get("radius")) : 0;
+                path.addPoint(new StormPathPoint(x, z, sec * 1000L, intensity, ptRadius));
             }
             // 持久化的 active 仅作记录；重启后需要重新 start 才计时，避免时间基准错乱。
             paths.put(id.toLowerCase(), path);
@@ -81,6 +82,7 @@ public class StormPathManager {
                 m.put("z", pt.z());
                 m.put("arrive-after-seconds", pt.arriveAfterSeconds());
                 m.put("intensity", pt.intensity());
+                m.put("radius", pt.radius());
                 pts.add(m);
             }
             yml.set(base + ".points", pts);
@@ -132,9 +134,10 @@ public class StormPathManager {
             double dx = loc.getX() - c[0];
             double dz = loc.getZ() - c[1];
             double dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist > p.radius()) continue;
+            double radius = p.radiusAt(now); // 每段可单独配置半径
+            if (dist > radius) continue;
             // 中心系数 2.0，边缘系数 ~0.2，线性插值；再乘以当前段强度（每段可单独配置）
-            double factor = (0.2 + 1.8 * (1.0 - dist / Math.max(1.0, p.radius()))) * p.intensityAt(now);
+            double factor = (0.2 + 1.8 * (1.0 - dist / Math.max(1.0, radius))) * p.intensityAt(now);
             if (best == null || factor > best.factor) {
                 best = new StormInfluence(p, c[0], c[1], dist, factor);
             }

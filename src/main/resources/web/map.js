@@ -89,7 +89,8 @@ window.ISTMap = (function () {
                 const s = worldToScreen(p.center.x, p.center.z);
                 ctx.fillStyle = '#f85149'; ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, 7); ctx.fill();
                 ctx.strokeStyle = '#f8514966'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(s.x, s.y, (p.radius || 100) * view.scale, 0, 7); ctx.stroke();
+                const effR = p.effectiveRadius || p.radius || 100;
+                ctx.beginPath(); ctx.arc(s.x, s.y, effR * view.scale, 0, 7); ctx.stroke();
             }
         });
 

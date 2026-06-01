@@ -290,6 +290,7 @@ const IST = (function () {
                 <div style="flex:0 0 auto" class="muted">#${i + 1} (${Math.round(p.x)}, ${Math.round(p.z)})</div>
                 <div><label class="f">到达(秒)</label><input class="f sm-arrive" type="number" value="${i * 600}" min="0"></div>
                 <div><label class="f">强度×</label><input class="f sm-int" type="number" value="1.0" step="0.1" min="0.1"></div>
+                <div><label class="f">半径(0=默认)</label><input class="f sm-rad" type="number" value="0" min="0"></div>
             </div>`).join('');
     }
     function closeStormModal() { document.getElementById('stormModal').classList.remove('show'); }
@@ -297,10 +298,12 @@ const IST = (function () {
     async function saveStorm() {
         const arrives = [...document.querySelectorAll('#smPoints .sm-arrive')];
         const ints = [...document.querySelectorAll('#smPoints .sm-int')];
+        const rads = [...document.querySelectorAll('#smPoints .sm-rad')];
         const points = stormDraftPoints.map((p, i) => ({
             x: p.x, z: p.z,
             arriveAfterSeconds: +(arrives[i] ? arrives[i].value : i * 600),
-            intensity: +(ints[i] ? ints[i].value : 1.0)
+            intensity: +(ints[i] ? ints[i].value : 1.0),
+            radius: +(rads[i] ? rads[i].value : 0)
         }));
         try {
             await api('storm/path/set', 'POST', {

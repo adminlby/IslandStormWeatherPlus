@@ -194,7 +194,7 @@ public class BlueMapHook {
         if (c != null) {
             Color red = new Color(248, 81, 73, 1.0f);
             Color redFill = new Color(248, 81, 73, 0.18f);
-            Shape circle = Shape.createCircle(c[0], c[1], Math.max(1.0, p.radius()), 48);
+            Shape circle = Shape.createCircle(c[0], c[1], Math.max(1.0, p.radiusAt(now)), 48);
             ShapeMarker radius = ShapeMarker.builder()
                     .label("台风 " + p.id() + " 影响范围")
                     .shape(circle, (float) markerY)

@@ -213,9 +213,26 @@ public class StormPath {
         return points.get(points.size() - 1).intensity();
     }
 
-    /** 当前半径（预留：将来可做每段半径，目前等于路径半径）。 */
+    /** 当前所处段的影响半径（沿段线性插值；点未设半径则用路径默认半径）。未生效返回路径半径。 */
     public double radiusAt(long nowMillis) {
-        return radius;
+        long elapsed = effectiveElapsed(nowMillis);
+        if (elapsed < 0) return radius;
+        if (elapsed <= points.get(0).arriveAfterMillis()) return effRadius(points.get(0));
+        for (int i = 0; i < points.size() - 1; i++) {
+            StormPathPoint a = points.get(i);
+            StormPathPoint b = points.get(i + 1);
+            if (elapsed >= a.arriveAfterMillis() && elapsed <= b.arriveAfterMillis()) {
+                long span = Math.max(1, b.arriveAfterMillis() - a.arriveAfterMillis());
+                double t = (elapsed - a.arriveAfterMillis()) / (double) span;
+                return effRadius(a) + (effRadius(b) - effRadius(a)) * t;
+            }
+        }
+        return effRadius(points.get(points.size() - 1));
+    }
+
+    /** 某点的有效半径：点自带半径>0 用之，否则用路径默认半径。 */
+    private double effRadius(StormPathPoint p) {
+        return p.radius() > 0 ? p.radius() : radius;
     }
 
     /** 路径是否已走完（末点之后）。暂停或未 active 时永不算走完。 */

@@ -51,6 +51,7 @@ public class StormPathApiHandler {
                 pm.put("z", pt.z());
                 pm.put("arriveAfterSeconds", pt.arriveAfterSeconds());
                 pm.put("intensity", pt.intensity());
+                pm.put("radius", pt.radius());
                 pts.add(pm);
             }
             m.put("points", pts);
@@ -63,6 +64,7 @@ public class StormPathApiHandler {
                 // 中心处「分区天气」：台风类型 + 该处有效风（含本风暴增益与所在区域叠加）
                 double intensity = p.intensityAt(now);
                 m.put("intensity", intensity);
+                m.put("effectiveRadius", p.radiusAt(now));
                 m.put("dangerLevel", p.type().dangerLevel().name());
                 m.put("dangerColor", p.type().dangerLevel().hexColor());
                 fillCenterWind(m, p, c, intensity);
@@ -125,7 +127,8 @@ public class StormPathApiHandler {
                 double z = p.get("z").getAsDouble();
                 long sec = p.has("arriveAfterSeconds") ? p.get("arriveAfterSeconds").getAsLong() : 0L;
                 double intensity = p.has("intensity") ? p.get("intensity").getAsDouble() : 1.0;
-                path.addPoint(new StormPathPoint(x, z, sec * 1000L, intensity));
+                double ptRadius = p.has("radius") ? p.get("radius").getAsDouble() : 0;
+                path.addPoint(new StormPathPoint(x, z, sec * 1000L, intensity, ptRadius));
             }
         }
         boolean active = b.has("active") && b.get("active").getAsBoolean();
