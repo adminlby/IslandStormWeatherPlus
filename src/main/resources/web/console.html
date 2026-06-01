@@ -87,6 +87,7 @@
                 <button class="ghost" id="mapReload">刷新地图</button>
                 <button class="ghost" id="modeRegion" data-perm="region.create">✏ 画框建区域</button>
                 <button class="ghost" id="modeStorm" data-perm="storm.path.edit">🌀 点击建风暴点</button>
+                <button class="ghost" id="modeStormFinish" data-perm="storm.path.edit" style="display:none">✓ 完成风暴路径</button>
                 <button class="ghost" id="modePan">🖐 拖动</button>
                 <button class="ghost" id="bluemapToggle">🌍 BlueMap</button>
                 <a class="ghost" id="bluemapOpen" href="#" target="_blank" rel="noopener"
@@ -169,6 +170,48 @@
             <div><label class="f">破坏等级</label><input class="f" id="rmDamageLevel" type="number" value="0" min="0" max="5"></div>
         </div>
         <button class="act" id="rmSave">保存区域</button>
+    </div>
+</div>
+
+<!-- 风暴路径设置弹层（台风/极端风暴专用，依两点以上路径） -->
+<div class="modal-bg" id="stormModal">
+    <div class="modal">
+        <span class="close" onclick="IST.closeStormModal()">✕</span>
+        <h3>新建风暴路径（台风 / 极端风暴）</h3>
+        <div class="row">
+            <div><label class="f">风暴 id</label><input class="f" id="smId"></div>
+            <div>
+                <label class="f">类型</label>
+                <select class="f" id="smType">
+                    <option value="TYPHOON">🌀 台风 TYPHOON</option>
+                    <option value="EXTREME_STORM">🌪 极端风暴 EXTREME_STORM</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div><label class="f">影响半径</label><input class="f" id="smRadius" type="number" value="150" min="1"></div>
+            <div>
+                <label class="f">路径形态</label>
+                <select class="f" id="smCurved">
+                    <option value="false">折线（直线分段）</option>
+                    <option value="true">曲线（平滑）</option>
+                </select>
+            </div>
+            <div>
+                <label class="f">立即启动</label>
+                <select class="f" id="smActive"><option value="true">是</option><option value="false">否</option></select>
+            </div>
+        </div>
+        <div class="row">
+            <div>
+                <label class="f">方块破坏</label>
+                <select class="f" id="smDamage"><option value="false">关闭</option><option value="true">开启</option></select>
+            </div>
+            <div><label class="f">破坏等级(0-5)</label><input class="f" id="smDamageLevel" type="number" value="2" min="0" max="5"></div>
+        </div>
+        <label class="f">路径分段（到达秒数=该段移动速度，强度×=该段风力倍率）</label>
+        <div id="smPoints" style="max-height:200px;overflow:auto;margin:6px 0 12px"></div>
+        <button class="act" id="smSave">保存风暴路径</button>
     </div>
 </div>
 

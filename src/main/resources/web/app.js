@@ -101,12 +101,43 @@ const IST = (function () {
     async function loadStorms() {
         if (!hasPerm('storm.path.view')) return;
         const s = await api('storm/path');
-        document.getElementById('stormList').innerHTML = s.storms.length ? s.storms.map(p => `
-            <div class="stat" style="margin-bottom:8px">
-                <b>${p.id}</b> <span class="muted">${p.type} @${p.world} R${Math.round(p.radius)}</span>
-                ${p.active ? '<span class="ok-text">[运行]</span>' : '<span class="muted">[停止]</span>'}
-                <div class="muted" style="font-size:12px">点数 ${p.points.length}${p.center ? ' · 中心 ' + Math.round(p.center.x) + ',' + Math.round(p.center.z) : ''}</div>
-            </div>`).join('') : '<span class="muted">暂无风暴路径</span>';
+        const canEdit = hasPerm('storm.path.edit');
+        document.getElementById('stormList').innerHTML = s.storms.length ? s.storms.map(p => {
+            const state = p.paused ? '<span class="muted">[暂停]</span>'
+                : (p.active ? '<span class="ok-text">[运行]</span>'
+                    : (p.ended ? '<span class="muted">[已结束]</span>' : '<span class="muted">[未启动]</span>'));
+            const center = p.center ? ' · 中心 ' + Math.round(p.center.x) + ',' + Math.round(p.center.z) : '';
+            const cw = (p.center && p.centerWindSpeed != null)
+                ? `<div class="muted" style="font-size:12px">中心天气 ${p.icon || ''}${p.typeDisplay || ''} · 风 ${p.centerWindSpeed}km/h ${p.centerWindDirection || ''} ${p.centerWindLevel || ''} · 强度×${(p.intensity || 1).toFixed(1)}</div>`
+                : '';
+            let btns = '';
+            if (canEdit) {
+                const b = (act, label) => `<button class="ghost" onclick="IST.stormAction('${p.id}','${act}')">${label}</button>`;
+                if (!p.active) btns += b('start', '启动');
+                if (p.active && !p.paused) btns += b('pause', '暂停');
+                if (p.paused) btns += b('resume', '继续');
+                if (p.active) btns += b('stop', '停止');
+                btns += b('delete', '删除');
+            }
+            const tags = `${p.type} @${p.world} R${Math.round(p.radius)}${p.curved ? ' ·曲线' : ''}${p.blockDamageEnabled ? ' ·破坏L' + p.blockDamageLevel : ''}`;
+            return `<div class="stat" style="margin-bottom:8px">
+                <b>${p.id}</b> <span class="muted">${tags}</span> ${state}
+                <div class="muted" style="font-size:12px">点数 ${p.points.length}${center}</div>
+                ${cw}
+                ${btns ? '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">' + btns + '</div>' : ''}
+            </div>`;
+        }).join('') : '<span class="muted">暂无风暴路径</span>';
+    }
+
+    const STORM_ACTION_LABEL = { start: '启动', pause: '暂停', resume: '继续', stop: '停止', delete: '删除' };
+    async function stormAction(id, action) {
+        if (action === 'delete' && !confirm('删除风暴 ' + id + '？')) return;
+        try {
+            await api('storm/path/' + action, 'POST', { id });
+            toast('已' + (STORM_ACTION_LABEL[action] || action));
+            loadStorms();
+            if (window.ISTMap) window.ISTMap.reload();
+        } catch (e) { toast(e.message, false); }
     }
 
     async function loadUsers() {
@@ -205,6 +236,56 @@ const IST = (function () {
         } catch (e) { toast(e.message, false); }
     }
 
+    // 风暴弹层（点集来自地图点击）
+    let stormDraftPoints = [];
+    function openStormModal(draft) {
+        stormDraftPoints = (draft || []).map(p => ({ x: p.x, z: p.z }));
+        if (stormDraftPoints.length < 2) { toast('请先在地图上点至少 2 个点', false); return; }
+        document.getElementById('smId').value = 'typhoon-' + (Date.now() + '').slice(-4);
+        document.getElementById('smRadius').value = 150;
+        document.getElementById('smType').value = 'TYPHOON';
+        document.getElementById('smCurved').value = 'false';
+        document.getElementById('smActive').value = 'true';
+        document.getElementById('smDamage').value = 'false';
+        document.getElementById('smDamageLevel').value = 2;
+        renderStormPoints();
+        document.getElementById('stormModal').classList.add('show');
+    }
+    function renderStormPoints() {
+        document.getElementById('smPoints').innerHTML = stormDraftPoints.map((p, i) => `
+            <div class="row" style="align-items:flex-end;margin-bottom:6px">
+                <div style="flex:0 0 auto" class="muted">#${i + 1} (${Math.round(p.x)}, ${Math.round(p.z)})</div>
+                <div><label class="f">到达(秒)</label><input class="f sm-arrive" type="number" value="${i * 600}" min="0"></div>
+                <div><label class="f">强度×</label><input class="f sm-int" type="number" value="1.0" step="0.1" min="0.1"></div>
+            </div>`).join('');
+    }
+    function closeStormModal() { document.getElementById('stormModal').classList.remove('show'); }
+
+    async function saveStorm() {
+        const arrives = [...document.querySelectorAll('#smPoints .sm-arrive')];
+        const ints = [...document.querySelectorAll('#smPoints .sm-int')];
+        const points = stormDraftPoints.map((p, i) => ({
+            x: p.x, z: p.z,
+            arriveAfterSeconds: +(arrives[i] ? arrives[i].value : i * 600),
+            intensity: +(ints[i] ? ints[i].value : 1.0)
+        }));
+        try {
+            await api('storm/path/set', 'POST', {
+                id: document.getElementById('smId').value,
+                type: document.getElementById('smType').value,
+                world: window.ISTMap ? window.ISTMap.currentWorld() : null,
+                radius: +document.getElementById('smRadius').value,
+                curved: document.getElementById('smCurved').value === 'true',
+                blockDamageEnabled: document.getElementById('smDamage').value === 'true',
+                blockDamageLevel: +document.getElementById('smDamageLevel').value,
+                active: document.getElementById('smActive').value === 'true',
+                points
+            });
+            toast('风暴路径已保存'); closeStormModal(); loadStorms();
+            if (window.ISTMap) window.ISTMap.reload();
+        } catch (e) { toast(e.message, false); }
+    }
+
     // ---------- 初始化 ----------
     function init() {
         document.getElementById('who').textContent = '👤 ' + (localStorage.getItem('IST_USER') || '');
@@ -221,6 +302,7 @@ const IST = (function () {
         bind('btnSetWind', setWind);
         bind('btnCreateUser', createUser);
         bind('rmSave', saveRegion);
+        bind('smSave', saveStorm);
         bind('htmlPreview', () => genHtml('preview'));
         bind('htmlForecast', () => genHtml('forecast'));
         bind('htmlAll', () => genHtml('all'));
@@ -235,5 +317,8 @@ const IST = (function () {
 
     document.addEventListener('DOMContentLoaded', init);
 
-    return { api, hasPerm, toast, delRegion, delUser, closeModal, openRegionModal, loadRegions, loadStorms };
+    return {
+        api, hasPerm, toast, delRegion, delUser, closeModal, openRegionModal, loadRegions, loadStorms,
+        stormAction, openStormModal, closeStormModal
+    };
 })();
