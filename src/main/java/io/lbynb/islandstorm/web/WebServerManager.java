@@ -42,12 +42,17 @@ public class WebServerManager {
         try {
             server = HttpServer.create(new InetSocketAddress(bind, port), 0);
             server.createContext("/api", new ApiRouter(plugin));
+            // 公开只读天气卡（无需鉴权，供 OBS 浏览器源）；前缀比 "/" 更长，优先匹配 /card/*
+            server.createContext("/card", new CardHandler(plugin));
             server.createContext("/", new StaticFileHandler(staticRoot));
             // 小型线程池处理请求；Bukkit 相关逻辑在 Handler 内部经 runSync 切回主线程
             server.setExecutor(Executors.newFixedThreadPool(4));
             server.start();
             plugin.getLogger().info("网页控制台已启动： http://" + bind + ":" + port
                     + " （静态目录 " + staticRoot.getPath() + "）");
+            plugin.getLogger().info("天气卡实时 URL（可直接加入 OBS 浏览器源）："
+                    + " http://" + bind + ":" + port + "/card/preview"
+                    + " ， http://" + bind + ":" + port + "/card/hourly");
             plugin.getLogger().warning("注意：默认监听 0.0.0.0，请确保已配置防火墙/反向代理，避免控制台暴露公网。");
         } catch (IOException e) {
             plugin.getLogger().severe("网页控制台启动失败（端口 " + port + " 可能被占用）：" + e.getMessage());

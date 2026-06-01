@@ -39,9 +39,9 @@ public class WindEffectTask extends BukkitRunnable {
         final boolean onlySurvival = config.onlyAffectSurvival();
         final boolean groundOn = config.groundEffectEnabled();
         final boolean elytraOn = config.elytraEffectEnabled();
-        final double pushMult = config.pushMultiplier();
-        final double elytraMult = config.elytraMultiplier();
-        final double extreme = config.extremeSpeed();
+        final double groundStrength = config.windGroundStrength();
+        final double elytraStrength = config.windElytraStrength();
+        final double extreme = Math.max(1.0, config.extremeSpeed());
         final boolean blowAway = config.allowBlowAway();
 
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -55,20 +55,23 @@ public class WindEffectTask extends BukkitRunnable {
             double speed = ws.speed();
             if (speed <= 10) continue; // 无影响档
 
+            // 归一化强度：speed 达到 extreme 即为 1.0，最高 1.5（超强台风眼壁）
+            double s = Math.min(1.5, speed / extreme);
             Vector dir = ws.direction().toVector();
             if (p.isGliding()) {
                 if (!elytraOn) continue;
-                // 鞘翅：把风向量叠加到当前速度——顺风加速、逆风减速、侧风偏移自然成立
-                Vector add = dir.clone().multiply(speed * elytraMult * 0.01);
+                // 鞘翅：把风向量叠加到当前速度——顺风加速、逆风减速、侧风弯折飞行路径
+                Vector add = dir.clone().multiply(elytraStrength * s);
                 p.setVelocity(p.getVelocity().add(cap(add, 0.6)));
             } else {
                 if (!groundOn) continue;
-                Vector add = dir.clone().multiply(speed * pushMult * 0.01);
+                // 地面：明显推搡/漂移；极端风额外增幅并略微吹起
+                Vector add = dir.clone().multiply(groundStrength * s);
                 if (blowAway && speed >= extreme) {
-                    add.multiply(2.2);
-                    if (add.getY() < 0.22) add.setY(0.22); // 极端风：略微吹起
+                    add.multiply(1.6);
+                    if (add.getY() < 0.25) add.setY(0.25);
                 }
-                p.setVelocity(p.getVelocity().add(cap(add, 0.8)));
+                p.setVelocity(p.getVelocity().add(cap(add, 0.9)));
             }
         }
     }

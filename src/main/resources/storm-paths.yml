@@ -2,6 +2,10 @@
 # 可用游戏指令创建，也可用网页控制台地图拖拽创建。
 # 重启后需重新 /storm path start <id> 才会重新计时移动。
 #
+# curved: true 走 Catmull-Rom 平滑曲线（需 >=3 点），否则分段直线。
+# 每个点可单独配置：arrive-after-seconds（到达时间=该段速度）、intensity（强度倍率，沿段插值）、
+#                  radius（该点影响半径，<=0 表示沿用上面的 radius，沿段插值）。
+#
 # 示例（默认注释掉，按需取消注释）：
 # storms:
 #   typhoon-001:
@@ -9,17 +13,24 @@
 #     world: world
 #     active: false
 #     radius: 180
+#     curved: true
 #     block-damage-enabled: true
 #     block-damage-level: 2
 #     points:
 #       - x: -500
 #         z: 200
 #         arrive-after-seconds: 0
+#         intensity: 0.8
+#         radius: 120
 #       - x: -100
 #         z: 120
 #         arrive-after-seconds: 600
+#         intensity: 1.5
+#         radius: 200
 #       - x: 300
 #         z: 60
 #         arrive-after-seconds: 1200
+#         intensity: 1.0
+#         radius: 0
 
 storms: {}

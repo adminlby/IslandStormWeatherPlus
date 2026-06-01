@@ -44,12 +44,27 @@ wind:
   default-direction: NE
   ground-effect-enabled: true
   elytra-effect-enabled: true
+  # 风力强度：风速归一化(speed/extreme-speed, 上限1.5)后乘以下列强度，得到每次施加的速度增量(格/tick)。
+  # 数值越大玩家被吹得越明显；默认值已能让生存/冒险玩家明显位移、鞘翅航线被吹弯。
+  ground-strength: 0.18      # 地面行走时的推力强度（站立/行走玩家会被推搡、漂移）
+  elytra-strength: 0.12      # 鞘翅滑翔时的推力强度（顺风加速/逆风减速/侧风偏移飞行路径）
+  effect-interval-ticks: 4   # 施加风力的间隔(tick)；越小越平滑，4 约 0.2 秒一次
+  # 旧字段（保留兼容，已不再使用）：push-multiplier / elytra-multiplier
   push-multiplier: 0.015
   elytra-multiplier: 0.035
   dangerous-speed: 90
   extreme-speed: 120
   allow-blow-away: true
   bypass-permission: islandstorm.bypass
+
+# ---------------- 风粒子（让玩家"看得到风"，按玩家逐个下发，封顶不卡） ----------------
+particles:
+  enabled: true
+  min-speed: 25              # 本地风速达到该值(km/h)才生成粒子
+  count: 10                  # 每个玩家每次生成的粒子数（封顶，避免卡顿）
+  interval-ticks: 3          # 生成间隔(tick)
+  radius: 6                  # 粒子在玩家周围生成的半径(格)
+  type: CLOUD                # 粒子类型(Bukkit Particle 名)，建议 CLOUD / WHITE_ASH / SNOWFLAKE 等无需附加数据的类型
 
 # ---------------- 网页控制台 ----------------
 web:

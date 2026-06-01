@@ -38,6 +38,7 @@ public class RegionApiHandler {
         if (name == null || name.isEmpty()) throw ApiException.badRequest("缺少区域名称");
         if (plugin.regionManager().exists(name)) throw ApiException.badRequest("区域已存在：" + name);
         WeatherType type = WeatherType.fromString(str(b, "weather"), WeatherType.CLEAR);
+        requireNonStorm(type);
         WeatherRegion r = new WeatherRegion(
                 name,
                 str(b, "world") == null ? plugin.configManager().mapDefaultWorld() : str(b, "world"),
@@ -46,8 +47,6 @@ public class RegionApiHandler {
                 getDouble(b, "windSpeed", type.defaultWindSpeed()),
                 WindDirection.fromString(str(b, "windDirection"), type.defaultWindDirection()),
                 DangerLevel.fromString(str(b, "dangerLevel"), type.dangerLevel()),
-                getBool(b, "blockDamageEnabled", false),
-                getInt(b, "blockDamageLevel", type.defaultDamageLevel()),
                 durationToEnd(getInt(b, "durationMinutes", 0)));
         plugin.regionManager().add(r);
         return toMap(r);
@@ -58,14 +57,16 @@ public class RegionApiHandler {
         String name = str(b, "name");
         WeatherRegion r = plugin.regionManager().get(name);
         if (r == null) throw ApiException.notFound("区域不存在：" + name);
-        if (b.has("weather")) r.setWeather(WeatherType.fromString(str(b, "weather"), r.weather()));
+        if (b.has("weather")) {
+            WeatherType nt = WeatherType.fromString(str(b, "weather"), r.weather());
+            requireNonStorm(nt);
+            r.setWeather(nt);
+        }
         if (b.has("windSpeed")) r.setWindSpeed(b.get("windSpeed").getAsDouble());
         if (b.has("windDirection"))
             r.setWindDirection(WindDirection.fromString(str(b, "windDirection"), r.windDirection()));
         if (b.has("dangerLevel"))
             r.setDangerLevel(DangerLevel.fromString(str(b, "dangerLevel"), r.dangerLevel()));
-        if (b.has("blockDamageEnabled")) r.setBlockDamageEnabled(b.get("blockDamageEnabled").getAsBoolean());
-        if (b.has("blockDamageLevel")) r.setBlockDamageLevel(b.get("blockDamageLevel").getAsInt());
         if (b.has("minX") || b.has("minZ") || b.has("maxX") || b.has("maxZ")) {
             r.setBounds(getInt(b, "minX", r.minX()), getInt(b, "minZ", r.minZ()),
                     getInt(b, "maxX", r.maxX()), getInt(b, "maxZ", r.maxZ()));
@@ -99,11 +100,16 @@ public class RegionApiHandler {
         m.put("windDirection", r.windDirection().name());
         m.put("dangerLevel", r.dangerLevel().name());
         m.put("dangerColor", r.dangerLevel().hexColor());
-        m.put("blockDamageEnabled", r.blockDamageEnabled());
-        m.put("blockDamageLevel", r.blockDamageLevel());
         long now = System.currentTimeMillis();
         m.put("remainingMinutes", r.endEpochMillis() <= 0 ? 0 : Math.max(0, (r.endEpochMillis() - now) / 60_000L));
         return m;
+    }
+
+    /** 矩形区域不允许台风/极端风暴天气（这两个是风暴路径专属）。 */
+    private static void requireNonStorm(WeatherType type) {
+        if (type == WeatherType.TYPHOON || type == WeatherType.EXTREME_STORM) {
+            throw ApiException.badRequest("区域不能使用台风/极端风暴天气，请用风暴路径功能（两点以上路径）创建。");
+        }
     }
 
     private static long durationToEnd(int minutes) {
@@ -120,9 +126,5 @@ public class RegionApiHandler {
 
     private static double getDouble(JsonObject o, String k, double def) {
         return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsDouble() : def;
-    }
-
-    private static boolean getBool(JsonObject o, String k, boolean def) {
-        return (o != null && o.has(k) && !o.get(k).isJsonNull()) ? o.get(k).getAsBoolean() : def;
     }
 }

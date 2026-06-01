@@ -5,6 +5,8 @@ const IST = (function () {
     if (!token) location.href = 'login.html';
 
     const WEATHER_TYPES = ['CLEAR','CLOUDY','RAIN','HEAVY_RAIN','THUNDERSTORM','FOG','WINDY','TYPHOON','EXTREME_STORM'];
+    // 区域天气不含台风/极端风暴（这两个是风暴路径专属）
+    const REGION_WEATHER_TYPES = WEATHER_TYPES.filter(t => t !== 'TYPHOON' && t !== 'EXTREME_STORM');
     const DIRS = ['N','NE','E','SE','S','SW','W','NW'];
 
     function hasPerm(p) { return perms.includes('*') || perms.includes(p); }
@@ -101,12 +103,43 @@ const IST = (function () {
     async function loadStorms() {
         if (!hasPerm('storm.path.view')) return;
         const s = await api('storm/path');
-        document.getElementById('stormList').innerHTML = s.storms.length ? s.storms.map(p => `
-            <div class="stat" style="margin-bottom:8px">
-                <b>${p.id}</b> <span class="muted">${p.type} @${p.world} R${Math.round(p.radius)}</span>
-                ${p.active ? '<span class="ok-text">[运行]</span>' : '<span class="muted">[停止]</span>'}
-                <div class="muted" style="font-size:12px">点数 ${p.points.length}${p.center ? ' · 中心 ' + Math.round(p.center.x) + ',' + Math.round(p.center.z) : ''}</div>
-            </div>`).join('') : '<span class="muted">暂无风暴路径</span>';
+        const canEdit = hasPerm('storm.path.edit');
+        document.getElementById('stormList').innerHTML = s.storms.length ? s.storms.map(p => {
+            const state = p.paused ? '<span class="muted">[暂停]</span>'
+                : (p.active ? '<span class="ok-text">[运行]</span>'
+                    : (p.ended ? '<span class="muted">[已结束]</span>' : '<span class="muted">[未启动]</span>'));
+            const center = p.center ? ' · 中心 ' + Math.round(p.center.x) + ',' + Math.round(p.center.z) : '';
+            const cw = (p.center && p.centerWindSpeed != null)
+                ? `<div class="muted" style="font-size:12px">中心天气 ${p.icon || ''}${p.typeDisplay || ''} · 风 ${p.centerWindSpeed}km/h ${p.centerWindDirection || ''} ${p.centerWindLevel || ''} · 强度×${(p.intensity || 1).toFixed(1)}</div>`
+                : '';
+            let btns = '';
+            if (canEdit) {
+                const b = (act, label) => `<button class="ghost" onclick="IST.stormAction('${p.id}','${act}')">${label}</button>`;
+                if (!p.active) btns += b('start', '启动');
+                if (p.active && !p.paused) btns += b('pause', '暂停');
+                if (p.paused) btns += b('resume', '继续');
+                if (p.active) btns += b('stop', '停止');
+                btns += b('delete', '删除');
+            }
+            const tags = `${p.type} @${p.world} R${Math.round(p.radius)}${p.curved ? ' ·曲线' : ''}${p.blockDamageEnabled ? ' ·破坏L' + p.blockDamageLevel : ''}`;
+            return `<div class="stat" style="margin-bottom:8px">
+                <b>${p.id}</b> <span class="muted">${tags}</span> ${state}
+                <div class="muted" style="font-size:12px">点数 ${p.points.length}${center}</div>
+                ${cw}
+                ${btns ? '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">' + btns + '</div>' : ''}
+            </div>`;
+        }).join('') : '<span class="muted">暂无风暴路径</span>';
+    }
+
+    const STORM_ACTION_LABEL = { start: '启动', pause: '暂停', resume: '继续', stop: '停止', delete: '删除' };
+    async function stormAction(id, action) {
+        if (action === 'delete' && !confirm('删除风暴 ' + id + '？')) return;
+        try {
+            await api('storm/path/' + action, 'POST', { id });
+            toast('已' + (STORM_ACTION_LABEL[action] || action));
+            loadStorms();
+            if (window.ISTMap) window.ISTMap.reload();
+        } catch (e) { toast(e.message, false); }
     }
 
     async function loadUsers() {
@@ -168,8 +201,41 @@ const IST = (function () {
 
     async function genHtml(which) {
         const path = which === 'preview' ? 'html/generate' : (which === 'forecast' ? 'html/generate/hourly' : 'html/generate/all');
-        try { const r = await api(path, 'POST'); document.getElementById('htmlResult').textContent = r.message || '已生成'; toast('已生成 HTML'); }
-        catch (e) { toast(e.message, false); }
+        try {
+            const r = await api(path, 'POST');
+            const urls = (r.previewUrl || r.hourlyUrl)
+                ? `<br>实时URL：<a href="${r.previewUrl}" target="_blank">${r.previewUrl}</a> · <a href="${r.hourlyUrl}" target="_blank">${r.hourlyUrl}</a>` : '';
+            document.getElementById('htmlResult').innerHTML = (r.message || '已生成') + urls;
+            toast('已生成 HTML');
+        } catch (e) { toast(e.message, false); }
+    }
+
+    // ---- 天气卡实时 URL（公开只读，OBS 直接用） ----
+    function buildCardUrl(kind) {
+        const mode = document.getElementById('cardMode') ? document.getElementById('cardMode').value : 'global';
+        const player = document.getElementById('cardPlayer') ? document.getElementById('cardPlayer').value : '';
+        let u = location.origin + '/card/' + kind;
+        if (mode === 'player' && player) u += '?mode=player&player=' + encodeURIComponent(player);
+        return u;
+    }
+    function refreshCardUrls() {
+        const pv = document.getElementById('cardPreviewUrl'), hv = document.getElementById('cardHourlyUrl');
+        if (pv) pv.value = buildCardUrl('preview');
+        if (hv) hv.value = buildCardUrl('hourly');
+    }
+    async function loadCardPlayers() {
+        if (!hasPerm('html.generate')) return;
+        try {
+            const d = await api('players');
+            const sel = document.getElementById('cardPlayer');
+            if (sel) {
+                const list = d.players || [];
+                sel.innerHTML = list.length
+                    ? list.map(p => `<option value="${p.name}">${p.name} @${p.world}</option>`).join('')
+                    : '<option value="">（无在线玩家）</option>';
+            }
+            refreshCardUrls();
+        } catch (e) { /* 无权限忽略 */ }
     }
 
     // 区域弹层
@@ -197,11 +263,62 @@ const IST = (function () {
                 weather: document.getElementById('rmWeather').value,
                 windSpeed: +document.getElementById('rmWindSpeed').value,
                 windDirection: document.getElementById('rmWindDir').value,
-                durationMinutes: +document.getElementById('rmDuration').value,
-                blockDamageEnabled: document.getElementById('rmDamage').value === 'true',
-                blockDamageLevel: +document.getElementById('rmDamageLevel').value
+                durationMinutes: +document.getElementById('rmDuration').value
             });
             toast('区域已创建'); closeModal(); loadRegions();
+        } catch (e) { toast(e.message, false); }
+    }
+
+    // 风暴弹层（点集来自地图点击）
+    let stormDraftPoints = [];
+    function openStormModal(draft) {
+        stormDraftPoints = (draft || []).map(p => ({ x: p.x, z: p.z }));
+        if (stormDraftPoints.length < 2) { toast('请先在地图上点至少 2 个点', false); return; }
+        document.getElementById('smId').value = 'typhoon-' + (Date.now() + '').slice(-4);
+        document.getElementById('smRadius').value = 150;
+        document.getElementById('smType').value = 'TYPHOON';
+        document.getElementById('smCurved').value = 'false';
+        document.getElementById('smActive').value = 'true';
+        document.getElementById('smDamage').value = 'false';
+        document.getElementById('smDamageLevel').value = 2;
+        renderStormPoints();
+        document.getElementById('stormModal').classList.add('show');
+    }
+    function renderStormPoints() {
+        document.getElementById('smPoints').innerHTML = stormDraftPoints.map((p, i) => `
+            <div class="row" style="align-items:flex-end;margin-bottom:6px">
+                <div style="flex:0 0 auto" class="muted">#${i + 1} (${Math.round(p.x)}, ${Math.round(p.z)})</div>
+                <div><label class="f">到达(秒)</label><input class="f sm-arrive" type="number" value="${i * 600}" min="0"></div>
+                <div><label class="f">强度×</label><input class="f sm-int" type="number" value="1.0" step="0.1" min="0.1"></div>
+                <div><label class="f">半径(0=默认)</label><input class="f sm-rad" type="number" value="0" min="0"></div>
+            </div>`).join('');
+    }
+    function closeStormModal() { document.getElementById('stormModal').classList.remove('show'); }
+
+    async function saveStorm() {
+        const arrives = [...document.querySelectorAll('#smPoints .sm-arrive')];
+        const ints = [...document.querySelectorAll('#smPoints .sm-int')];
+        const rads = [...document.querySelectorAll('#smPoints .sm-rad')];
+        const points = stormDraftPoints.map((p, i) => ({
+            x: p.x, z: p.z,
+            arriveAfterSeconds: +(arrives[i] ? arrives[i].value : i * 600),
+            intensity: +(ints[i] ? ints[i].value : 1.0),
+            radius: +(rads[i] ? rads[i].value : 0)
+        }));
+        try {
+            await api('storm/path/set', 'POST', {
+                id: document.getElementById('smId').value,
+                type: document.getElementById('smType').value,
+                world: window.ISTMap ? window.ISTMap.currentWorld() : null,
+                radius: +document.getElementById('smRadius').value,
+                curved: document.getElementById('smCurved').value === 'true',
+                blockDamageEnabled: document.getElementById('smDamage').value === 'true',
+                blockDamageLevel: +document.getElementById('smDamageLevel').value,
+                active: document.getElementById('smActive').value === 'true',
+                points
+            });
+            toast('风暴路径已保存'); closeStormModal(); loadStorms();
+            if (window.ISTMap) window.ISTMap.reload();
         } catch (e) { toast(e.message, false); }
     }
 
@@ -213,7 +330,7 @@ const IST = (function () {
 
         fillSelect('setWeatherType', WEATHER_TYPES);
         fillSelect('windDir', DIRS);
-        fillSelect('rmWeather', WEATHER_TYPES);
+        fillSelect('rmWeather', REGION_WEATHER_TYPES);
         fillSelect('rmWindDir', DIRS);
 
         const bind = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
@@ -221,19 +338,28 @@ const IST = (function () {
         bind('btnSetWind', setWind);
         bind('btnCreateUser', createUser);
         bind('rmSave', saveRegion);
+        bind('smSave', saveStorm);
         bind('htmlPreview', () => genHtml('preview'));
         bind('htmlForecast', () => genHtml('forecast'));
         bind('htmlAll', () => genHtml('all'));
+        bind('cardOpenPreview', () => window.open(buildCardUrl('preview'), '_blank'));
+        bind('cardOpenHourly', () => window.open(buildCardUrl('hourly'), '_blank'));
+        const cm = document.getElementById('cardMode'); if (cm) cm.addEventListener('change', refreshCardUrls);
+        const cp = document.getElementById('cardPlayer'); if (cp) cp.addEventListener('change', refreshCardUrls);
 
         setInterval(() => {
             document.getElementById('clock').textContent = new Date().toLocaleTimeString();
         }, 1000);
 
-        loadStatus(); loadWeather(); loadHourly(); loadRegions(); loadStorms(); loadUsers();
+        loadStatus(); loadWeather(); loadHourly(); loadRegions(); loadStorms(); loadUsers(); loadCardPlayers();
         setInterval(() => { loadStatus(); loadWeather(); }, 15000);
+        setInterval(loadCardPlayers, 30000);
     }
 
     document.addEventListener('DOMContentLoaded', init);
 
-    return { api, hasPerm, toast, delRegion, delUser, closeModal, openRegionModal, loadRegions, loadStorms };
+    return {
+        api, hasPerm, toast, delRegion, delUser, closeModal, openRegionModal, loadRegions, loadStorms,
+        stormAction, openStormModal, closeStormModal
+    };
 })();

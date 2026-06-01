@@ -2,8 +2,6 @@ package io.lbynb.islandstorm.damage;
 
 import io.lbynb.islandstorm.IslandStormPlugin;
 import io.lbynb.islandstorm.config.ConfigManager;
-import io.lbynb.islandstorm.region.RegionManager;
-import io.lbynb.islandstorm.region.WeatherRegion;
 import io.lbynb.islandstorm.storm.StormPathManager;
 import io.lbynb.islandstorm.weather.WeatherManager;
 import io.lbynb.islandstorm.weather.WeatherState;
@@ -34,17 +32,15 @@ public class BlockDamageManager {
 
     private final IslandStormPlugin plugin;
     private final ConfigManager config;
-    private final RegionManager regions;
     private final StormPathManager storms;
     private final WeatherManager weather;
     private final Random random = new Random();
     private final boolean worldGuardPresent;
 
-    public BlockDamageManager(IslandStormPlugin plugin, ConfigManager config, RegionManager regions,
+    public BlockDamageManager(IslandStormPlugin plugin, ConfigManager config,
                               StormPathManager storms, WeatherManager weather) {
         this.plugin = plugin;
         this.config = config;
-        this.regions = regions;
         this.storms = storms;
         this.weather = weather;
         this.worldGuardPresent = Bukkit.getPluginManager().getPlugin("WorldGuard") != null;
@@ -53,15 +49,11 @@ public class BlockDamageManager {
         }
     }
 
-    /** 计算某位置的有效破坏等级（取 区域 / 风暴 / 全局天气 三者最大值）；0 表示不破坏。 */
+    /** 计算某位置的有效破坏等级（取 风暴 / 全局天气 两者最大值）；0 表示不破坏。
+     *  注意：方块破坏只来源于台风/风暴与全局天气，<b>矩形区域不参与破坏</b>。 */
     public int effectiveDamageLevelAt(Location loc) {
         if (!config.blockDamageEnabled()) return 0;
         int level = 0;
-
-        WeatherRegion region = regions.regionAt(loc);
-        if (region != null && region.blockDamageEnabled()) {
-            level = Math.max(level, region.blockDamageLevel());
-        }
 
         StormPathManager.StormInfluence inf = storms.influenceAt(loc);
         if (inf != null && inf.storm.blockDamageEnabled()) {

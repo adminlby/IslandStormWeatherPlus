@@ -8,6 +8,7 @@ import io.lbynb.islandstorm.map.MapProvider;
 import io.lbynb.islandstorm.map.VanillaMapProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -31,6 +32,22 @@ public class MapApiHandler {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("worlds", names);
             out.put("defaultWorld", plugin.configManager().mapDefaultWorld());
+            return out;
+        });
+    }
+
+    /** GET /api/players → 在线玩家名 + 所在世界（供天气卡「玩家附近」模式选择）。 */
+    public Object players() {
+        return ApiSupport.runSync(plugin, () -> {
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("name", p.getName());
+                m.put("world", p.getWorld().getName());
+                list.add(m);
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("players", list);
             return out;
         });
     }
@@ -93,6 +110,10 @@ public class MapApiHandler {
             m.put("type", p.type().name());
             m.put("radius", p.radius());
             m.put("active", p.active());
+            m.put("paused", p.paused());
+            m.put("curved", p.curved());
+            // 跑完/停止的风暴（曾启动但当前非 active）不再在地图上显示路径线，等同「取消显示」
+            m.put("ended", p.startEpochMillis() > 0 && !p.active());
             List<Map<String, Object>> pts = new ArrayList<>();
             p.points().forEach(pt -> {
                 Map<String, Object> pm = new LinkedHashMap<>();
@@ -108,6 +129,7 @@ public class MapApiHandler {
                 center.put("x", c[0]);
                 center.put("z", c[1]);
                 m.put("center", center);
+                m.put("effectiveRadius", p.radiusAt(now)); // 当前段有效半径，地图据此画影响圈
             }
             list.add(m);
         });

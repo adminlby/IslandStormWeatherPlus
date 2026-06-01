@@ -87,6 +87,7 @@
                 <button class="ghost" id="mapReload">刷新地图</button>
                 <button class="ghost" id="modeRegion" data-perm="region.create">✏ 画框建区域</button>
                 <button class="ghost" id="modeStorm" data-perm="storm.path.edit">🌀 点击建风暴点</button>
+                <button class="ghost" id="modeStormFinish" data-perm="storm.path.edit" style="display:none">✓ 完成风暴路径</button>
                 <button class="ghost" id="modePan">🖐 拖动</button>
                 <button class="ghost" id="bluemapToggle">🌍 BlueMap</button>
                 <a class="ghost" id="bluemapOpen" href="#" target="_blank" rel="noopener"
@@ -115,13 +116,34 @@
             <div id="stormList"></div>
         </div>
 
-        <!-- HTML 生成 -->
+        <!-- HTML 天气卡 -->
         <div class="card col-6" data-perm="html.generate">
             <h2>🖼 HTML 天气卡</h2>
-            <p class="muted" style="font-size:13px">生成 OBS 浏览器源可用的天气卡片。</p>
-            <button class="ghost" id="htmlPreview">生成天气预览卡</button>
-            <button class="ghost" id="htmlForecast">生成小时预报卡</button>
-            <button class="ghost" id="htmlAll">生成全部</button>
+            <p class="muted" style="font-size:13px">下方为<b>实时 URL</b>，直接加入 OBS 浏览器源即可（无需登录、自动刷新）。</p>
+            <div class="row">
+                <div>
+                    <label class="f">显示模式</label>
+                    <select class="f" id="cardMode">
+                        <option value="global">全局天气</option>
+                        <option value="player">玩家附近</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="f">玩家（“玩家附近”时生效）</label>
+                    <select class="f" id="cardPlayer"></select>
+                </div>
+            </div>
+            <label class="f" style="margin-top:8px">天气预览卡 URL（点击全选复制）</label>
+            <input class="f" id="cardPreviewUrl" readonly onclick="this.select()">
+            <label class="f">小时预报卡 URL（点击全选复制）</label>
+            <input class="f" id="cardHourlyUrl" readonly onclick="this.select()">
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+                <button class="ghost" id="cardOpenPreview">↗ 预览天气卡</button>
+                <button class="ghost" id="cardOpenHourly">↗ 预览小时卡</button>
+                <button class="ghost" id="htmlPreview">写出文件(预览)</button>
+                <button class="ghost" id="htmlForecast">写出文件(小时)</button>
+                <button class="ghost" id="htmlAll">写出全部</button>
+            </div>
             <div class="muted" id="htmlResult" style="margin-top:10px;font-size:12px"></div>
         </div>
 
@@ -158,17 +180,51 @@
             <div><label class="f">风速</label><input class="f" id="rmWindSpeed" type="number" value="40"></div>
             <div><label class="f">风向</label><select class="f" id="rmWindDir"></select></div>
         </div>
+        <label class="f">持续(分钟, 0=永久)</label><input class="f" id="rmDuration" type="number" value="30">
+        <p class="muted" style="font-size:12px;margin-top:6px">矩形区域不含台风/极端风暴与方块破坏——这些是「风暴路径」专属。</p>
+        <button class="act" id="rmSave">保存区域</button>
+    </div>
+</div>
+
+<!-- 风暴路径设置弹层（台风/极端风暴专用，依两点以上路径） -->
+<div class="modal-bg" id="stormModal">
+    <div class="modal">
+        <span class="close" onclick="IST.closeStormModal()">✕</span>
+        <h3>新建风暴路径（台风 / 极端风暴）</h3>
+        <div class="row">
+            <div><label class="f">风暴 id</label><input class="f" id="smId"></div>
+            <div>
+                <label class="f">类型</label>
+                <select class="f" id="smType">
+                    <option value="TYPHOON">🌀 台风 TYPHOON</option>
+                    <option value="EXTREME_STORM">🌪 极端风暴 EXTREME_STORM</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div><label class="f">影响半径</label><input class="f" id="smRadius" type="number" value="150" min="1"></div>
+            <div>
+                <label class="f">路径形态</label>
+                <select class="f" id="smCurved">
+                    <option value="false">折线（直线分段）</option>
+                    <option value="true">曲线（平滑）</option>
+                </select>
+            </div>
+            <div>
+                <label class="f">立即启动</label>
+                <select class="f" id="smActive"><option value="true">是</option><option value="false">否</option></select>
+            </div>
+        </div>
         <div class="row">
             <div>
-                <label class="f">持续(分钟,0=永久)</label><input class="f" id="rmDuration" type="number" value="30">
-            </div>
-            <div>
                 <label class="f">方块破坏</label>
-                <select class="f" id="rmDamage"><option value="false">关闭</option><option value="true">开启</option></select>
+                <select class="f" id="smDamage"><option value="false">关闭</option><option value="true">开启</option></select>
             </div>
-            <div><label class="f">破坏等级</label><input class="f" id="rmDamageLevel" type="number" value="0" min="0" max="5"></div>
+            <div><label class="f">破坏等级(0-5)</label><input class="f" id="smDamageLevel" type="number" value="2" min="0" max="5"></div>
         </div>
-        <button class="act" id="rmSave">保存区域</button>
+        <label class="f">路径分段（到达秒数=该段移动速度，强度×=该段风力倍率）</label>
+        <div id="smPoints" style="max-height:200px;overflow:auto;margin:6px 0 12px"></div>
+        <button class="act" id="smSave">保存风暴路径</button>
     </div>
 </div>
 

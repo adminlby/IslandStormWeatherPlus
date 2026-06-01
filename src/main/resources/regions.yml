@@ -1,6 +1,7 @@
 # 区域天气数据（矩形，按 X/Z 平面圈定，不限 Y）
 # 可用游戏指令创建，也可用网页控制台地图画框创建。
 # duration-minutes: 0 或缺省 表示永久；其余为现实分钟数。
+# 注意：区域不支持台风/极端风暴天气，也不含方块破坏——这些是「风暴路径(storm-paths.yml)」专属。
 #
 # 示例（默认注释掉，按需取消注释）：
 # regions:
@@ -15,7 +16,5 @@
 #     wind-direction: NE
 #     danger-level: HIGH
 #     duration-minutes: 30
-#     block-damage-enabled: false
-#     block-damage-level: 0
 
 regions: {}

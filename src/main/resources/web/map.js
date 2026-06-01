@@ -74,15 +74,12 @@ window.ISTMap = (function () {
             ctx.fillText(rg.name, a.x + 4, a.y + 14);
         });
 
-        // 风暴路径线 + 中心
+        // 风暴路径线 + 中心（跑完/已结束的风暴不显示）
         storms.forEach(p => {
+            if (p.ended) return;
             if (p.points && p.points.length) {
-                ctx.strokeStyle = '#f0883e'; ctx.lineWidth = 2; ctx.beginPath();
-                p.points.forEach((pt, i) => {
-                    const s = worldToScreen(pt.x, pt.z);
-                    i === 0 ? ctx.moveTo(s.x, s.y) : ctx.lineTo(s.x, s.y);
-                });
-                ctx.stroke();
+                ctx.strokeStyle = '#f0883e'; ctx.lineWidth = 2;
+                drawStormLine(p.points, p.curved);
                 p.points.forEach(pt => {
                     const s = worldToScreen(pt.x, pt.z);
                     ctx.fillStyle = '#f0883e'; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 7); ctx.fill();
@@ -92,7 +89,8 @@ window.ISTMap = (function () {
                 const s = worldToScreen(p.center.x, p.center.z);
                 ctx.fillStyle = '#f85149'; ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, 7); ctx.fill();
                 ctx.strokeStyle = '#f8514966'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.arc(s.x, s.y, (p.radius || 100) * view.scale, 0, 7); ctx.stroke();
+                const effR = p.effectiveRadius || p.radius || 100;
+                ctx.beginPath(); ctx.arc(s.x, s.y, effR * view.scale, 0, 7); ctx.stroke();
             }
         });
 
@@ -111,6 +109,33 @@ window.ISTMap = (function () {
             ctx.strokeRect(dragStart.x, dragStart.y, dragCur.x - dragStart.x, dragCur.y - dragStart.y);
             ctx.setLineDash([]);
         }
+    }
+
+    // 折线或 Catmull-Rom 平滑曲线（与后端 StormPath.centerAt 的曲线一致）
+    function drawStormLine(pts, curved) {
+        ctx.beginPath();
+        if (curved && pts.length >= 3) {
+            const s0 = worldToScreen(pts[0].x, pts[0].z);
+            ctx.moveTo(s0.x, s0.y);
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+                for (let st = 1; st <= 12; st++) {
+                    const t = st / 12;
+                    const x = cr(p0.x, p1.x, p2.x, p3.x, t), z = cr(p0.z, p1.z, p2.z, p3.z, t);
+                    const s = worldToScreen(x, z); ctx.lineTo(s.x, s.y);
+                }
+            }
+        } else {
+            pts.forEach((pt, i) => {
+                const s = worldToScreen(pt.x, pt.z);
+                i === 0 ? ctx.moveTo(s.x, s.y) : ctx.lineTo(s.x, s.y);
+            });
+        }
+        ctx.stroke();
+    }
+    function cr(p0, p1, p2, p3, t) {
+        const t2 = t * t, t3 = t2 * t;
+        return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
     }
 
     function drawGrid() {
@@ -168,8 +193,11 @@ window.ISTMap = (function () {
     function setMode(m) {
         mode = m;
         document.getElementById('mapMode').textContent =
-            '模式：' + (m === 'pan' ? '拖动' : m === 'region' ? '画框建区域' : '建风暴点');
+            '模式：' + (m === 'pan' ? '拖动' : m === 'region' ? '画框建区域' : '建风暴点（点完按✓完成）');
         if (m === 'storm') stormDraft = [];
+        const fin = document.getElementById('modeStormFinish');
+        if (fin) fin.style.display = (m === 'storm') ? '' : 'none';
+        draw();
     }
 
     canvas.addEventListener('mousedown', e => {
@@ -199,10 +227,10 @@ window.ISTMap = (function () {
                 });
             }
         } else if (mode === 'storm' && dragStart) {
+            // 累积路径点；曲线/多段需要 ≥3 点，故不在第 2 点自动结束，改由「✓ 完成风暴路径」触发
             const w = screenToWorld(dragStart.x, dragStart.y);
             stormDraft.push({ x: Math.round(w.x), z: Math.round(w.z) });
             draw();
-            if (stormDraft.length >= 2) promptStormSave();
         }
         dragStart = dragCur = null;
     });
@@ -217,18 +245,13 @@ window.ISTMap = (function () {
         draw();
     }, { passive: false });
 
-    async function promptStormSave() {
-        if (!confirm('已选 ' + stormDraft.length + ' 个点，创建风暴路径？')) { stormDraft = []; draw(); return; }
-        const id = prompt('风暴 id：', 'typhoon-' + Date.now().toString().slice(-4));
-        if (!id) { stormDraft = []; draw(); return; }
-        const type = prompt('类型 TYPHOON / EXTREME_STORM：', 'TYPHOON') || 'TYPHOON';
-        const radius = parseFloat(prompt('影响半径：', '150')) || 150;
-        // 均匀分配到达时间：每段 600 秒
-        const points = stormDraft.map((p, i) => ({ x: p.x, z: p.z, arriveAfterSeconds: i * 600 }));
-        try {
-            await IST.api('storm/path/set', 'POST', { id, type, world, radius, active: true, points });
-            IST.toast('风暴路径已创建'); stormDraft = []; reload(); IST.loadStorms && IST.loadStorms();
-        } catch (e) { IST.toast(e.message, false); }
+    // 「✓ 完成风暴路径」：把累积的点交给控制台的风暴弹层去配置细则（类型/破坏/曲线/分段强度）
+    function finishStorm() {
+        if (stormDraft.length < 2) { IST.toast('请先在地图上点至少 2 个点', false); return; }
+        if (IST.openStormModal) {
+            IST.openStormModal(stormDraft.map(p => ({ x: p.x, z: p.z })));
+            stormDraft = []; draw();
+        }
     }
 
     // ---- BlueMap 入口 ----
@@ -270,6 +293,7 @@ window.ISTMap = (function () {
     // 工具栏按钮
     const bindMode = (id, m) => { const el = document.getElementById(id); if (el) el.addEventListener('click', () => setMode(m)); };
     bindMode('modePan', 'pan'); bindMode('modeRegion', 'region'); bindMode('modeStorm', 'storm');
+    const finBtn = document.getElementById('modeStormFinish'); if (finBtn) finBtn.addEventListener('click', finishStorm);
     const mr = document.getElementById('mapReload'); if (mr) mr.addEventListener('click', reload);
     const bmBtn = document.getElementById('bluemapToggle'); if (bmBtn) bmBtn.addEventListener('click', toggleBluemap);
 
