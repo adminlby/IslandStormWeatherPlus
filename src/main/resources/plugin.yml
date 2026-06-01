@@ -24,7 +24,6 @@ permissions:
       islandstorm.setwind: true
       islandstorm.forecast: true
       islandstorm.html: true
-      islandstorm.bypass: true
       islandstorm.debug: true
       islandstorm.region: true
       islandstorm.path: true
@@ -48,8 +47,8 @@ permissions:
     description: 允许生成 HTML 天气卡
     default: op
   islandstorm.bypass:
-    description: 允许绕过风影响
-    default: op
+    description: 免疫风力影响（默认无人持有；OP/管理员也会被风吹，需用 /storm bypass 运行时开关，或显式授予此节点）
+    default: false
   islandstorm.debug:
     description: 允许查看调试信息
     default: op

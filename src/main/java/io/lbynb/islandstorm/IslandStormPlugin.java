@@ -78,8 +78,6 @@ public final class IslandStormPlugin extends JavaPlugin {
         this.weatherManager = new WeatherManager(this, configManager, windManager);
         this.forecastManager = new ForecastManager();
         this.weatherManager.setScheduleSupplier(forecastManager::pollNext);
-        this.hourlyForecastManager =
-                new HourlyForecastManager(configManager, weatherManager, windManager, forecastManager);
 
         this.regionManager = new RegionManager(this);
         this.regionManager.load();
@@ -87,6 +85,10 @@ public final class IslandStormPlugin extends JavaPlugin {
         this.stormPathManager.load();
         windManager.setRegionManager(regionManager);
         windManager.setStormPathManager(stormPathManager);
+        // 风暴驱动原版天气（台风期间下雨打雷）与小时预报叠加都需要风暴源
+        this.weatherManager.setStormPathManager(stormPathManager);
+        this.hourlyForecastManager = new HourlyForecastManager(
+                configManager, weatherManager, windManager, forecastManager, stormPathManager);
 
         this.blockDamageManager =
                 new BlockDamageManager(this, configManager, stormPathManager, weatherManager);
