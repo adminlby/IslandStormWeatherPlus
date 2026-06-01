@@ -116,13 +116,34 @@
             <div id="stormList"></div>
         </div>
 
-        <!-- HTML 生成 -->
+        <!-- HTML 天气卡 -->
         <div class="card col-6" data-perm="html.generate">
             <h2>🖼 HTML 天气卡</h2>
-            <p class="muted" style="font-size:13px">生成 OBS 浏览器源可用的天气卡片。</p>
-            <button class="ghost" id="htmlPreview">生成天气预览卡</button>
-            <button class="ghost" id="htmlForecast">生成小时预报卡</button>
-            <button class="ghost" id="htmlAll">生成全部</button>
+            <p class="muted" style="font-size:13px">下方为<b>实时 URL</b>，直接加入 OBS 浏览器源即可（无需登录、自动刷新）。</p>
+            <div class="row">
+                <div>
+                    <label class="f">显示模式</label>
+                    <select class="f" id="cardMode">
+                        <option value="global">全局天气</option>
+                        <option value="player">玩家附近</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="f">玩家（“玩家附近”时生效）</label>
+                    <select class="f" id="cardPlayer"></select>
+                </div>
+            </div>
+            <label class="f" style="margin-top:8px">天气预览卡 URL（点击全选复制）</label>
+            <input class="f" id="cardPreviewUrl" readonly onclick="this.select()">
+            <label class="f">小时预报卡 URL（点击全选复制）</label>
+            <input class="f" id="cardHourlyUrl" readonly onclick="this.select()">
+            <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+                <button class="ghost" id="cardOpenPreview">↗ 预览天气卡</button>
+                <button class="ghost" id="cardOpenHourly">↗ 预览小时卡</button>
+                <button class="ghost" id="htmlPreview">写出文件(预览)</button>
+                <button class="ghost" id="htmlForecast">写出文件(小时)</button>
+                <button class="ghost" id="htmlAll">写出全部</button>
+            </div>
             <div class="muted" id="htmlResult" style="margin-top:10px;font-size:12px"></div>
         </div>
 

@@ -199,8 +199,41 @@ const IST = (function () {
 
     async function genHtml(which) {
         const path = which === 'preview' ? 'html/generate' : (which === 'forecast' ? 'html/generate/hourly' : 'html/generate/all');
-        try { const r = await api(path, 'POST'); document.getElementById('htmlResult').textContent = r.message || '已生成'; toast('已生成 HTML'); }
-        catch (e) { toast(e.message, false); }
+        try {
+            const r = await api(path, 'POST');
+            const urls = (r.previewUrl || r.hourlyUrl)
+                ? `<br>实时URL：<a href="${r.previewUrl}" target="_blank">${r.previewUrl}</a> · <a href="${r.hourlyUrl}" target="_blank">${r.hourlyUrl}</a>` : '';
+            document.getElementById('htmlResult').innerHTML = (r.message || '已生成') + urls;
+            toast('已生成 HTML');
+        } catch (e) { toast(e.message, false); }
+    }
+
+    // ---- 天气卡实时 URL（公开只读，OBS 直接用） ----
+    function buildCardUrl(kind) {
+        const mode = document.getElementById('cardMode') ? document.getElementById('cardMode').value : 'global';
+        const player = document.getElementById('cardPlayer') ? document.getElementById('cardPlayer').value : '';
+        let u = location.origin + '/card/' + kind;
+        if (mode === 'player' && player) u += '?mode=player&player=' + encodeURIComponent(player);
+        return u;
+    }
+    function refreshCardUrls() {
+        const pv = document.getElementById('cardPreviewUrl'), hv = document.getElementById('cardHourlyUrl');
+        if (pv) pv.value = buildCardUrl('preview');
+        if (hv) hv.value = buildCardUrl('hourly');
+    }
+    async function loadCardPlayers() {
+        if (!hasPerm('html.generate')) return;
+        try {
+            const d = await api('players');
+            const sel = document.getElementById('cardPlayer');
+            if (sel) {
+                const list = d.players || [];
+                sel.innerHTML = list.length
+                    ? list.map(p => `<option value="${p.name}">${p.name} @${p.world}</option>`).join('')
+                    : '<option value="">（无在线玩家）</option>';
+            }
+            refreshCardUrls();
+        } catch (e) { /* 无权限忽略 */ }
     }
 
     // 区域弹层
@@ -306,13 +339,18 @@ const IST = (function () {
         bind('htmlPreview', () => genHtml('preview'));
         bind('htmlForecast', () => genHtml('forecast'));
         bind('htmlAll', () => genHtml('all'));
+        bind('cardOpenPreview', () => window.open(buildCardUrl('preview'), '_blank'));
+        bind('cardOpenHourly', () => window.open(buildCardUrl('hourly'), '_blank'));
+        const cm = document.getElementById('cardMode'); if (cm) cm.addEventListener('change', refreshCardUrls);
+        const cp = document.getElementById('cardPlayer'); if (cp) cp.addEventListener('change', refreshCardUrls);
 
         setInterval(() => {
             document.getElementById('clock').textContent = new Date().toLocaleTimeString();
         }, 1000);
 
-        loadStatus(); loadWeather(); loadHourly(); loadRegions(); loadStorms(); loadUsers();
+        loadStatus(); loadWeather(); loadHourly(); loadRegions(); loadStorms(); loadUsers(); loadCardPlayers();
         setInterval(() => { loadStatus(); loadWeather(); }, 15000);
+        setInterval(loadCardPlayers, 30000);
     }
 
     document.addEventListener('DOMContentLoaded', init);

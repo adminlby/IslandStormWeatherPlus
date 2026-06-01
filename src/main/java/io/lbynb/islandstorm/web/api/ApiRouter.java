@@ -135,6 +135,9 @@ public class ApiRouter implements HttpHandler {
             case "/api/map":
                 need(u, WebPermission.MAP_VIEW);
                 return map.map(query);
+            case "/api/players":
+                need(u, WebPermission.HTML_GENERATE);
+                return map.players();
 
             case "/api/storm/path":
                 need(u, WebPermission.STORM_PATH_VIEW);
@@ -167,15 +170,15 @@ public class ApiRouter implements HttpHandler {
             case "/api/html/generate":
                 requirePost(method);
                 need(u, WebPermission.HTML_GENERATE);
-                return htmlResult("preview");
+                return htmlResult("preview", ex);
             case "/api/html/generate/hourly":
                 requirePost(method);
                 need(u, WebPermission.HTML_GENERATE);
-                return htmlResult("forecast");
+                return htmlResult("forecast", ex);
             case "/api/html/generate/all":
                 requirePost(method);
                 need(u, WebPermission.HTML_GENERATE);
-                return htmlResult("all");
+                return htmlResult("all", ex);
 
             case "/api/users":
                 need(u, WebPermission.USER_MANAGE);
@@ -198,12 +201,24 @@ public class ApiRouter implements HttpHandler {
         }
     }
 
-    private Object htmlResult(String which) {
+    private Object htmlResult(String which, HttpExchange ex) {
         String msg = ApiSupport.runSync(plugin, () -> plugin.generateHtml(which));
+        String base = baseUrl(ex);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);
         out.put("message", msg);
+        out.put("previewUrl", base + "/card/preview");
+        out.put("hourlyUrl", base + "/card/hourly");
         return out;
+    }
+
+    /** 由请求 Host 头拼出对外可达的基地址（OBS 直接用）。 */
+    private String baseUrl(HttpExchange ex) {
+        String host = ex.getRequestHeaders().getFirst("Host");
+        if (host == null || host.isEmpty()) {
+            host = plugin.configManager().webBind() + ":" + plugin.configManager().webPort();
+        }
+        return "http://" + host;
     }
 
     // ---- 鉴权/校验 ----

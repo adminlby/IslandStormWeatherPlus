@@ -8,6 +8,7 @@ import io.lbynb.islandstorm.map.MapProvider;
 import io.lbynb.islandstorm.map.VanillaMapProvider;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -31,6 +32,22 @@ public class MapApiHandler {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("worlds", names);
             out.put("defaultWorld", plugin.configManager().mapDefaultWorld());
+            return out;
+        });
+    }
+
+    /** GET /api/players → 在线玩家名 + 所在世界（供天气卡「玩家附近」模式选择）。 */
+    public Object players() {
+        return ApiSupport.runSync(plugin, () -> {
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("name", p.getName());
+                m.put("world", p.getWorld().getName());
+                list.add(m);
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("players", list);
             return out;
         });
     }

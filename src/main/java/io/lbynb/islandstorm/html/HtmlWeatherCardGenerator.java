@@ -3,12 +3,16 @@ package io.lbynb.islandstorm.html;
 import io.lbynb.islandstorm.IslandStormPlugin;
 import io.lbynb.islandstorm.config.ConfigManager;
 import io.lbynb.islandstorm.forecast.HourlyForecastEntry;
+import io.lbynb.islandstorm.region.WeatherRegion;
+import io.lbynb.islandstorm.storm.StormPathManager;
 import io.lbynb.islandstorm.time.GameTimeUtil;
 import io.lbynb.islandstorm.weather.WeatherState;
 import io.lbynb.islandstorm.weather.WeatherType;
 import io.lbynb.islandstorm.wind.WindState;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,9 +69,15 @@ public class HtmlWeatherCardGenerator {
     // ============================ 赛事风预览卡 ============================
 
     public File generateWeatherPreview() throws IOException {
-        WeatherState cur = plugin.weatherManager().current();
-        WindState wind = plugin.windManager().global();
-        WeatherType t = cur != null ? cur.type() : WeatherType.CLEAR;
+        return write(config.raw().getString("html.file-name", "weather-preview.html"),
+                buildPreviewHtml(globalContext()));
+    }
+
+    /** 构建赛事风预览卡 HTML（不写文件）。{@code ctx} 决定全局或某玩家附近天气。 */
+    public String buildPreviewHtml(CardContext ctx) {
+        WeatherState cur = ctx.cur;
+        WindState wind = ctx.wind;
+        WeatherType t = ctx.type;
 
         String serverName = esc(config.serverName());
         String danger = t.dangerLevel().display();
@@ -105,7 +115,7 @@ public class HtmlWeatherCardGenerator {
                 <body><div class="stage"><div class="card">
                   <div class="head">
                     <div class="title">%s 天气预览</div>
-                    <div class="sub">IslandStorm Weather Center · 更新 %s</div>
+                    <div class="sub">IslandStorm Weather Center · %s · 更新 %s</div>
                   </div>
                   <div class="main">
                     <div class="now">
@@ -124,13 +134,13 @@ public class HtmlWeatherCardGenerator {
                   <div class="fcbar">%s</div>
                   <div class="foot">%s · 100H Island Survival</div>
                 </div></div></body></html>
-                """.formatted(previewCss(), serverName, GameTimeUtil.nowRealFormatted(),
+                """.formatted(previewCss(), serverName, esc(ctx.scope), GameTimeUtil.nowRealFormatted(),
                 t.icon(), esc(t.displayName()), esc(t.description()),
                 (int) wind.speed(), wind.direction().name(),
                 dangerColor, danger, esc(t.visibility()), remain,
                 fcHtml, serverName);
 
-        return write(config.raw().getString("html.file-name", "weather-preview.html"), html);
+        return html;
     }
 
     private String previewCss() {
@@ -166,9 +176,14 @@ public class HtmlWeatherCardGenerator {
     // ============================ 央视风小时预报卡 ============================
 
     public File generateHourlyForecast() throws IOException {
-        WeatherState cur = plugin.weatherManager().current();
-        WindState wind = plugin.windManager().global();
-        WeatherType t = cur != null ? cur.type() : WeatherType.CLEAR;
+        return write(config.raw().getString("html.hourly-file-name", "hourly-forecast.html"),
+                buildHourlyHtml(globalContext()));
+    }
+
+    /** 构建央视风小时预报卡 HTML（不写文件）。当前天气头部按 {@code ctx} 显示全局或玩家附近，逐小时表为全局排期。 */
+    public String buildHourlyHtml(CardContext ctx) {
+        WindState wind = ctx.wind;
+        WeatherType t = ctx.type;
 
         World w = resolveWorld();
         long fullTime = w != null ? w.getFullTime() : 0L;
@@ -211,7 +226,7 @@ public class HtmlWeatherCardGenerator {
                   <div class="top">
                     <div class="brand">IslandStorm Hourly Forecast</div>
                     <div class="brand-sub">100H Island Survival</div>
-                    <div class="upd">更新 %s</div>
+                    <div class="upd">%s · 更新 %s</div>
                   </div>
                   <div class="mid">
                     <div class="center">
@@ -229,13 +244,13 @@ public class HtmlWeatherCardGenerator {
                   <div class="hours">%s</div>
                   <div class="foot">%s · IslandStorm Weather Center</div>
                 </div></div></body></html>
-                """.formatted(hourlyCss(), GameTimeUtil.nowRealFormatted(),
+                """.formatted(hourlyCss(), esc(ctx.scope), GameTimeUtil.nowRealFormatted(),
                 t.icon(), esc(t.displayName()), (int) wind.speed(), wind.direction().name(),
                 t.dangerLevel().hexColor(), t.dangerLevel().display(),
                 esc(worldName), GameTimeUtil.nowRealFormatted(), mcDay, mcNow, esc(t.visibility()),
                 cells, esc(config.serverName()));
 
-        return write(config.raw().getString("html.hourly-file-name", "hourly-forecast.html"), html);
+        return html;
     }
 
     private String hourlyCss() {
@@ -268,6 +283,57 @@ public class HtmlWeatherCardGenerator {
                 .h-wd{font-size:1.2vh;color:#8fb4e0}.h-dg{font-size:1.3vh;font-weight:700}
                 .foot{text-align:center;color:#5f7da0;font-size:1.5vh;margin-top:1.2vh;letter-spacing:1px}
                 """;
+    }
+
+    // ============================ 上下文（全局 / 玩家附近） ============================
+
+    /** 卡片数据上下文：决定卡片显示全局天气还是某玩家附近天气。 */
+    public static final class CardContext {
+        final WeatherType type;
+        final WindState wind;
+        final String scope;       // 显示用范围标签，如「全局」「Steve 附近」
+        final WeatherState cur;   // 全局当前天气（用于剩余时长等）
+
+        CardContext(WeatherType type, WindState wind, String scope, WeatherState cur) {
+            this.type = type;
+            this.wind = wind;
+            this.scope = scope;
+            this.cur = cur;
+        }
+    }
+
+    /** 全局上下文。 */
+    public CardContext globalContext() {
+        WeatherState cur = plugin.weatherManager().current();
+        WindState wind = plugin.windManager().global();
+        WeatherType t = cur != null ? cur.type() : WeatherType.CLEAR;
+        return new CardContext(t, wind, "全局", cur);
+    }
+
+    /** 某玩家附近上下文；玩家不在线则回落全局。 */
+    public CardContext playerContext(String name) {
+        Player p = (name == null || name.isEmpty()) ? null : Bukkit.getPlayerExact(name);
+        if (p == null) return globalContext();
+        Location loc = p.getLocation();
+        WindState wind = plugin.windManager().effectiveWindAt(loc);
+        WeatherType t = effectiveTypeAt(loc);
+        return new CardContext(t, wind, p.getName() + " 附近", plugin.weatherManager().current());
+    }
+
+    /** 按 mode/player 解析上下文：mode=player 且玩家在线 → 玩家附近，否则全局。 */
+    public CardContext resolveContext(String mode, String player) {
+        if ("player".equalsIgnoreCase(mode)) return playerContext(player);
+        return globalContext();
+    }
+
+    /** 某位置的有效天气类型：区域 > 风暴影响 > 全局当前。 */
+    private WeatherType effectiveTypeAt(Location loc) {
+        WeatherRegion r = plugin.regionManager().regionAt(loc);
+        if (r != null) return r.weather();
+        StormPathManager.StormInfluence inf = plugin.stormPathManager().influenceAt(loc);
+        if (inf != null) return inf.storm.type();
+        WeatherState cur = plugin.weatherManager().current();
+        return cur != null ? cur.type() : WeatherType.CLEAR;
     }
 
     // ============================ 工具 ============================
